@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JQuery学习使用</title>
+    <script src="./jquery-3.4.1.js"></script>
+    <script src="./test.js"></script>
+    <style>
+        #area{
+            width: 700px;
+            height: 500px;
+            border: 3px solid red;
+        }
+        #blank{
+            width: 700px;
+            height: 500px;
+            border: 3px solid greenyellow;
+        }
+    </style>
+</head>
+<body>
+    <h3 id="mouse">鼠标位置:<span></span></h3>
+    <div id="area">在区域内移动</div>
+    <div id="blank"></div>
+    <script>
+        // 当网页元素加载完毕后 响应事件
+        // $(document).ready(function(){}); 完整写法
+        $(function(){    // 简化写法
+            $('#area').mousemove(function(e){
+                $('span').text(`x:${e.pageX},y:${e.pageY}`); //向span标签内加入文本
+            })
+        });
+        
+        for (let i = 0; i < 6; i++) {
+            $('body').append('<h1>');
+            $('h1').text("hello world");
+        }
+        
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>表单操作</title>
+</head>
+<body>
+    <!-- 
+    表单提交绑定事件（VerifyInfo函数） 
+    但事件返回值为true或false时，需要将事件返回值再次return给onsubmit
+    以此来判断后台是否接收表单提交
+    -->
+    <form action="https://www.baidu.com/" method="post" onsubmit="return VerifyInfo()">
+        <span>
+                用户名：<input type="text" name="username" id="username" placeholder="请输入用户名">
+        </span>
+        <br>
+        <span>
+                密码<input type="password" id="input-password">
+            <input type="hidden" name="password" id="md5-password">
+        </span>
+        
+        <!-- 按钮 绑定事件(submitInfo()函数) -->
+        <input type="submit" value="提交" onclick="submitInfo()">
+
+    </form>
+    <script src="./getInfo.js"></script>
+    <script src="./submitInfo.js"></script>
+    <script src="./md5.js"></script>
+</body>
+</html>

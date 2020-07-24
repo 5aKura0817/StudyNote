@@ -1,0 +1,12 @@
+/* 后代选择器 */
+/* body p{
+    background-color: aquamarine;
+} */
+
+/* 子代选择器 */
+/* body>p{
+    background-color: chocolate;
+} */
+.target ~p{
+    background-color: greenyellow;
+}

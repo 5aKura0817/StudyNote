@@ -1,0 +1,21 @@
+/* 选中 ul中第一个子元素 */
+ul li:first-child{
+    background-color: red;
+}
+
+/* 选中 ul中最后一个子元素 */
+ul li:last-child{
+    background-color: greenyellow;
+}
+
+/* 仅选中p1 
+选择 p元素的父级元素的子元素，并锁定第一个
+*/
+p:nth-child(1){
+    background-color: blue;
+}
+
+/* 选中父类子元素中第二个与 p同类型的元素 */
+p:nth-of-type(2){
+    background-color: burlywood;
+}

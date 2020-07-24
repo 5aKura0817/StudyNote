@@ -1,0 +1,39 @@
+/* 标签选择器 */
+h1{
+    color:#1831d1f8;
+    background-color: burlywood;
+    font-size: medium;
+}
+
+p{
+    background-color: cadetblue;
+    font-size: small;
+    color: antiquewhite;
+}
+
+/* 类选择器 */
+.title1{
+    color: red;
+    background-color: greenyellow;
+    font-size: xx-large;
+}
+
+.title2{
+    color: blue;
+    font-size: large;
+    background-color: antiquewhite;
+}
+
+/* id选择器 */
+#Sakura{
+    color: #7DB9DE;
+    background-color: #FEDFE1;
+}
+
+#Gyc{
+    color: gold;
+}
+
+#江南美人{
+    color: aquamarine;
+}

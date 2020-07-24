@@ -1,0 +1,62 @@
+/* display:
+block 转化为块元素
+inline 转为 行内元素
+inline-block 是块元素 但是有行内元素的特性
+可以在一行显示
+*/
+
+.block{
+    width: 200px;
+    height: 200px;
+    border: 2px solid red;
+    display: block;
+}
+
+span{
+    width: 100px;
+    height: 100px;
+    border: 2px solid greenyellow;
+}
+
+.botton{
+    border: 1px dashed black;
+    /* overflow: hidden; */
+}
+.botton::after{
+    content: " ";
+    display: block;
+    clear: both;
+}
+
+.image1{
+    width:200px;
+    height:100px;
+    border: 2px dashed red;
+    display: inline-block;
+    float: left;
+}
+
+#texts{
+    
+}
+
+.image2{
+    width:200px;
+    height:100px;
+    border: 2px solid blue;
+    display: inline-block;
+    float: left;
+}
+
+.clear{
+    clear:both;
+    margin: 0;
+    padding: 0;
+}
+
+/* overflow */
+#content{
+    width: 500px;
+    height: 400px;
+    overflow: hidden;
+}
