@@ -527,7 +527,7 @@ person.birth=2000/8/17
 
 - 文件目录/config/.yml   					=》 file:/config/
 - 文件根目录/.yml      				          =》 file:/
-- 项目目录/resour/config/.yml         =》classpath:/config/
+- 项目目录/resources/config/.yml         =》classpath:/config/
 - 项目目录/.yml                                   =》classpath:/
 
 

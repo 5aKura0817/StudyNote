@@ -202,7 +202,11 @@ Docker直接利用宿主机的硬件，容器之间相互的独立，VM需要安
 ## Docker HelloWorld流程简单回顾
 
 1. Docker run helloworld,命令执行，首先搜索本地仓库查找镜像
+
+   ![img](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724204305.png)
+
 2. 若本地有对应的镜像，直接启动。
+
 3. 若没有找到则到远程仓库下载镜像然后启动运行
 
 
@@ -213,7 +217,7 @@ Docker直接利用宿主机的硬件，容器之间相互的独立，VM需要安
 
 Docker是一个**Client-Server**结构的系统，Docker守护进程（Docker daemon）运行在主机上， 然后通过Socket连接从客户端访问，守护进程从客户端接受命令并管理运行在主机上的容器。 **容器，是一个运行时环境，就是我们前面说到的集装箱。**
 
-![img](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173027.png)
+
 
 
 
@@ -231,7 +235,9 @@ Docker是一个**Client-Server**结构的系统，Docker守护进程（Docker da
 
 `docker images` 查看主机上的镜像信息
 
-![image-20200505152600538](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173028.png)
+![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724202329.png)
+
+
 
 tomcat中集成了JDK等运行所需要的所有环境。
 
@@ -249,7 +255,9 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 - `-s num`：列举点赞数超过num的镜像
 
-  ![image-20200505154200735](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173029.png)
+  ![image-20200505152600538](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724201541.png)
+  
+  
 
 ---
 
@@ -267,7 +275,9 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `docker container ls`：列举本地容器信息
 
-![image-20200505160846194](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173030.png)
+![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724201710.png)
+
+
 
 ---
 
@@ -291,7 +301,9 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
   - **hostPort:containerPort**（最常用）
 
-    ![image-20200505173604715](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173031.png)
+    ![image-20200505154200735](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724201621.png)
+    
+    
 
 - `-P`：随机端口映射
 
@@ -311,7 +323,9 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `-a`：查询正在运行和历史运行的容器
 
-![image-20200505162501474](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173033.png)
+![image-20200505160846194](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724201728.png)
+
+
 
 `-n`：最近新创建n个容器
 
@@ -325,15 +339,15 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `docker exec -it 容器id 命令`在容器外进行操作
 
-![image-20200505172254692](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173034.png)
+![image-20200505162501474](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724204142.png)
 
 `docker exec -it 容器id /bin/bash`
 
-![image-20200505173312886](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173035.png)
+![image-20200505172254692](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724204127.png)
 
 `docker attach 容器ID`以上两个命令都可以重新进入容器
 
-![image-20200505173239696](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173036.png)
+![image-20200505173312886](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724204113.png)
 
 区别：
 
@@ -346,9 +360,7 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `docker cp 容器名字:拷贝文件或目录 拷贝目标位置或文件名`
 
-![image-20200514214234274](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173037.png)
-
-
+![image-20200505173239696](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724204053.png)
 
 ---
 
@@ -360,7 +372,9 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `docker start xxx`...启动容器
 
-![image-20200505163625065](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173038.png)
+![image-20200514214234274](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173037.png)
+
+
 
 
 
@@ -382,7 +396,7 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `docker stats 容器名`：查看docker中运行资源占用情况
 
-![image-20200514221628653](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173039.png)
+![image-20200505163625065](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724201838.png)
 
 `docker inspect 容器Id/容器名` 查看容器的详细信息。
 
@@ -400,25 +414,29 @@ tomcat中集成了JDK等运行所需要的所有环境。
   docker.io/portainer/portainer
   ```
 
+  ![image-20200514221628653](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724205841.png)
+  
   当8080端口开放后，外网通过8080端口就可以进入可视化界面
 
-![image-20200514223859374](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173040.png)
+
 
 
 
 选择本地
 
-![image-20200514224004544](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173041.png)
+![image-20200514223859374](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724205901.png)
 
 
 
 主界面
 
-![image-20200514224051558](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173042.png)
+![image-20200514224004544](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724205907.png)
+
+
 
 一些详细信息
 
-![image-20200514224159725](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173043.png)
+![image-20200514224051558](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724205913.png)
 
 
 
@@ -455,9 +473,9 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `docker commit -a="author_name" -m="commit_info" 容器id/容器名 new_image_name`
 
-例如我们在aliyun上pull的tomcat中每次都要将webapp.dist中的内容cp到webapp中才能正常访问页面，这样的话我们每次启动tomcat都需要设置一遍，现在我们可以对其进行修改 然后commit，从此后就使用我们commit的镜像就可以。
+例如我们在aliyun上pull的tomcat中每次都要将webapp.dist中的内容cp到webapp中才能正常访问页面，这样的话我们每次启动tomcat都需要设置一遍，现在我们可以对其进行修改 然后commit，从此后就使用我们commit的镜像就可以。】
 
-![image-20200514234238076](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173045.png)
+![image-20200514224159725](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724201925.png)
 
 
 
@@ -467,7 +485,9 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 在使用Docker镜像搭建环境的时候，总有个问题就是，由于容器的沙箱机制，导致容器里面的文件系统，和Docker宿主的机的文件系统是隔离的，==一旦我们删除了容器，其对应的所有文件信息也会被连带删除==，这样并不符合我们的开发预定（例如MySQL的数据库文件我们就需要持久化到本地，而不是放在容器中！），有什么办法可以将容器内的文件同步到宿主机上呢？
 
-![image-20200518221613252](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173046.png)
+![第八篇：Docker镜像结构原理](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203835.png)
+
+
 
 **Docker数据卷（Docker volume）**就是专门解决这个问题的；
 
@@ -484,15 +504,17 @@ tomcat中集成了JDK等运行所需要的所有环境。
 >
 > 示例中就是将 /var/lib/mysql(即我们容器内数据库文件)挂载到本地的/home/sakura/mysql_data目录下
 
-![第八篇：Docker镜像结构原理](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173044.png)
+
 
 测试一下：
 
-![image-20200518215609561](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173047.png)
+![image-20200518221613252](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203849.png)
 
 双向同步测试：
 
-<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173048.png" alt="image-20200518220407767" style="zoom: 45%;" /><img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173049.png" alt="image-20200518220710797" style="zoom:50%;" />
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173048.png" alt="image-20200518220407767" style="zoom: 45%;" />
+
+![image-20200514234238076](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203917.png)
 
 通过`docker inspect`来查看一下挂载信息(Mounts)：
 
@@ -506,11 +528,13 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `-v 挂载目录`：这种只指定了容器挂载路径的成为匿名挂载
 
-![image-20200518225320265](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173051.png)
+
 
 > 一般情况下，不指定主机路径，默认的挂载路径在`/var/lib/docker/volume`下，一个以挂载名命名的文件夹。
 >
-> ![image-20200518230131883](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173052.png)
+> ![image-20200518215609561](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203546.png)
+>
+> ![image-20200518230131883](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203801.png)
 
 这种匿名挂载方式不便于我们定位，再来说一说**具名挂载**
 
@@ -520,7 +544,9 @@ tomcat中集成了JDK等运行所需要的所有环境。
 docker run -it -v juming:/home centos
 ```
 
-![image-20200518230830070](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173053.png)
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173049.png" alt="image-20200518220710797" style="zoom:50%;" />
+
+
 
 还是这个路径，不过挂载名变成了我们可以区分的，所以==推荐使用具名挂载！==
 
@@ -599,19 +625,25 @@ CMD /bin/bash
 
 -t 参数写镜像名和标签
 
-![image-20200519162521227](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173054.png)
+![image-20200518230830070](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203443.png)
 
 创建过程也能看出，每条命令都是在一个容器中运行然后移除过渡容器，最终形成我们自己的镜像。↓
 
-![image-20200519162020975](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173055.png)
+![image-20200518225320265](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724202951.png)
+
+
 
 现在由于我们已经把挂载信息写在了镜像创建的dockerfile中，所以我们直接启动就能看到挂载的文件；
 
-![image-20200519162607760](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173056.png)
+![image-20200519162521227](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203024.png)
+
+
 
 同样我们可以使用Docker inspect查看镜像的信息，检查挂载目录在本机的位置
 
-![image-20200519162728559](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173057.png)
+![image-20200519162020975](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724202817.png)
+
+
 
 依然是这个熟悉的位置，并且确定就是一个匿名挂载。并且和我们之前进行挂载的效果一模一样：
 
@@ -620,6 +652,8 @@ CMD /bin/bash
 
 
 现在完成了宿主机与容器之间的数据互通，那能不能做到**容器之间的数据互通**呢？
+
+![image-20200519162728559](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203059.png)
 
 
 
@@ -631,7 +665,7 @@ CMD /bin/bash
 
 在启动时通过 `--volumes-from 容器名`参数就可将指定容器的数据拷贝使用，并且是==双向绑定==
 
-![image-20200519170948419](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173059.png)
+![image-20200519162607760](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203138.png)
 
 ```shell
 [root@localhost volumes]# docker run -it --name centos02 --volumes-from centos01 sakura/centos:1.0
@@ -737,7 +771,7 @@ docker build -f dockerfile -t mycentos .
 
 ![image-20200519173213823](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173102.png)
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520183330.png)
+
 
 这里就有了我们创建好的镜像，直接使用即可。
 
@@ -1210,3 +1244,10 @@ docker network connect mynet mytomcat05
 > 以后工作中我们交付时，只需要将应用构建成镜像即可。
 
 在此之后：当我们部署使用镜像很多的时候，就要学习docker的容器编排、集群部署(k8s)等
+
+
+
+
+
+## Docker Compose
+
