@@ -354,29 +354,164 @@ Git所采用的做法是 **每次提交的内容只有修改的内容增量**，
 
 
 
-# 五、工作流
+# 五、工作流（规范）
+
+master分支作为主分支，不应该直接在master分支上进行代码修改，master分支的更迭应该对应着线上稳定版的更新。
+所有的功能业务开发由dev分支进行管理，dev分支上测试通过后，合并到主分支进行稳定版发布，同时master分支进行版本更新。
+紧急bug修复，在由master分支引出的hotfix分支上进行紧急修复，修复完毕合并到主分支上。
+
+具体各个功能的开发测试在dev分支上还要不断细分成多个分支，具体规范按照公司规范。
+
+推荐阅读：
+[Git版本管理规范](https://blog.csdn.net/weixin_38809962/article/details/79814308)
+[Git详解及版本控制规范](https://blog.csdn.net/su1573/article/details/91988523)
+[git commit 提交规范 & 规范校验](https://blog.csdn.net/y491887095/article/details/80594043)
 
 
 
+# 六、为本地文件创建远程仓库（Gitee）
+
+当我们想要多地工作时，却又不想随身带着电脑或者u盘，并且这种方式并不利于我们做版本控制。此时我们==需要将我们本地版本仓库的代码推送到云端进行管理，方便我们随时随地下载，并且修改然后重新推送到云端。==
+
+常见的Git代码托管仓库：
+
+- GitHub（全球最大的同性交友平台）
+- GitLab (常用于企业搭建自己的托管仓库)
+- Gitee (国内，速度较快)
+- coding
+
+下面以Gitee作为远程代码托管仓库进行学习
+
+> Gitee上创建仓库
+
+![image-20200725094155691](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725094155.png)
 
 
 
+进入本地文件夹中打开Git终端执行以下代码：
+
+```shell
+# 链接到远程仓库
+git remote add origin https://gitee.com/s5akura/GitStudy.git
+# 将本地master分支(master)push到远程master分支（origin master）
+git push -u origin master
+
+# 如果有多个分支，需要切换分支然后推送到对应的远程分支上，例如
+(dev) git push -u origin dev
+```
+
+**这里的origin是远程仓库的一个别名，origin master也就是指远程仓库的master分支**
 
 
 
+初次Push可能要求输入Gitee的账号的密码，若不慎输入错误，可以参考一下方式修改：
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725095120.png" alt="image-20200723233903408" style="zoom:67%;" />
+
+> 首次从远端仓库拉取代码
+
+当你本地还没有远程仓库的代收的时候，需要从GItee上将代码拉取到本地（比如第一天去公司上班，公司电脑上没有项目文件）
+
+使用`git clone 仓库URL`命令即可将远程仓库的代码全复制一份到本地：
+
+虽然你用分支查看命令可能只看到一个master分支，但是其实所有的分支信息都被保留了，直接切换分支也是可以的。
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725103330.png" alt="image-20200725103330467" style="zoom:67%;" />
 
 
 
+> 当两地都有了远程仓库代码后正常的工作流程
+
+```markdown
+1. 在公司dev分支上研发完成新功能
+git checkout master
+git merge dev
+git push -u origin master
+2. dev分支同步跟进
+git checkout dev
+git merge master
+git push -u origin dev
+3. 下班回到家继续写代码,先拉取远程仓库的代码
+git pull origin master
+git pull origin dev
+4. 写完执行操作1,2再推送到Gitee
+5. 上班写代码第一步拉取Gitee上的代码，同操作3
+..
+```
+
+当我们在两地同时存在我们的代码版本的时候，每次开始Coding需要先使用`git pull`将代码拉取下来在最新的代码上进行修改。并且每次修改完一定要push到远程仓库中。确保下次拉取代码是最新的。
 
 
 
+> **案例**：有一天公司加班，下班的时候忘记Push到Gitee只是存在了公司电脑本地的代码库中，回到家中发现写了半天的代码没有Push，只好做一些其他模块的开发，最后睡觉的时候吃一堑长一智，把家中的代码Push到了Gitee，第二天回到公司上班，第一件事Pull代码，正当自己将在家写的新模块的代码拉取到本地时候，发现和昨天在公司写的没有Push的代码产生了冲突，只好自己手动一个一个解决。
+
+场景再现：
+
+1. 我们到我们使用clone拉取的文件夹（公司电脑文件夹）下，先执行pull orgin dev保证代码的最新
+
+2. 修改“公司文件夹”下的内容
+   <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725111545.png" alt="image-20200725111545717" style="zoom: 50%;" />
+
+3. commit到本地的仓库，但忘记推送到Gitee
+
+   ```shell
+   git add .
+   git commit -m '商城功能-50%'
+   ```
+
+4. 回家（之前本地的原生文件夹中），准备写代码先pull orgin dev
+
+   <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725112015.png" alt="image-20200725112015121" style="zoom: 50%;" />
+
+5. 想起来是在公司没有push，现在只好做其他的模块了：
+
+   <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725112233.png" alt="image-20200725112233436" style="zoom: 50%;" />
+
+   其实可以很明显看到14行已经存在了冲突。
+
+6. 准备睡觉，吃一堑长一智把在家写的代码push到Gitee上
+
+   ```shell
+   git add .
+   git commit -m '在家写的评论功能模块'
+   git push origin dev
+   ```
+
+7. 第二天回到公司上班，先pull代码，结果遇到了冲突：远程的代码和公司本地仓库中的代码存在冲突
+
+   <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725112947.png" alt="image-20200725112947434" style="zoom: 50%;" />
+
+8. 手动解决冲突：解决后：
+
+   <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725113127.png" alt="image-20200725113127156" style="zoom: 67%;" />
+
+9. 重新commit提交，并push到Gitee
+
+   ```shell
+   git add .
+   git commit -m '在家写的代码和公司代码冲突解决'
+   git push origin dev
+   ```
+
+10. 下班回家，同样再次pull代码，此时公司和家中的代码重回一致！！
+
+​	
+
+## 知识扩展
+
+> Git Fetch和 Git Merge实现Git pull
+
+其实`git pull origin dev`可以看做是两个命令的结合体！
+
+- `git fetch origin dev`
+- `git mertge origin/dev`
+
+fetch是用于将远程仓库的中的版本拉取到本地版本库,此时本地版本库就会有一个origin/dev的版本
+然后使用merge origin/dev将本地的代码合并更新到使用fetch拉取下来的最新版。
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725131820.png" alt="image-20200725131820840" style="zoom:67%;" />
 
 
-
-
-
-
-# 结合使用Gitee
 
 > 本地配置远程仓库免密登录
 
@@ -410,25 +545,112 @@ Git所采用的做法是 **每次提交的内容只有修改的内容增量**，
 
 
 
-> 创建仓库
-
-<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200723231549.png" alt="image-20200723231549609" style="zoom:50%;" />
-
-创建完远程仓库后，直接使用`git clone`将远程仓库克隆到本地！
-
-![image-20200723231712463](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200723231712.png)
-
-然后所有的远程仓库的东西都会原封不动下载到本地：
-
-<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200723231848.png" alt="image-20200723231848401" style="zoom:80%;" />
 
 
+# 七、rebase（变基）
+
+用于简化我们的提交信息。
+
+## 三大使用场景
+
+> 合并多个commit
+
+当在开发的过程中，可能会出现一个功能很多久，而且为了保存记录也commit了很多次（还没有push）,而当我们在结束功能开发时候，想要把中间的commit都合并到一个commit时可以使用`git rebase -i HEAD~n`，表示把从当前开始和往前n条commit合并：
+
+![image-20200725135933064](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725135933.png)
+
+比如这里的四条摸鱼commit记录，我想把这四条记录合并成一个commit，来看具体操作
+
+```shell
+# -i选项
+-i, --interactive     let the user edit the list of commits to rebase
+# 编辑前四条提交
+git rebase -i HEAD~4
+```
+
+此时会弹出来一个编辑界面需要我们操作
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725140859.png" alt="image-20200725140859675" style="zoom:67%;" />
+
+例如我现在想做的操作是：
+
+第一、二条记录：修改commit的注释
+第三、四条记录：合并到第二条记录中
+
+通过下面的操作码的描述我们就需要用到 **r**和**s**
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725141443.png" alt="image-20200725141443387" style="zoom:67%;" />
+
+编辑后：
+
+```
+r 596c717 摸鱼第一天
+r f63c823 摸鱼第二天
+s 72f5d0c 摸鱼第三天
+s b23fb5b 摸鱼第四天
+```
+
+保存回到终端，我就要开始陆续处理我们的操作请求了
+
+1. 修改1的commit message
+
+   <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725141832.png" alt="image-20200725141832390" style="zoom:67%;" />
+
+2. 修改2的commit message(同上)
+
+3. 合并3,4提交到2中：
+
+   <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725142119.png" alt="image-20200725142119084" style="zoom:50%;" />
+
+   我们只留下“开始持续摸鱼”然后保存关闭
+
+----
+
+四条记录处理完成后，会自动commit，我们再来看看commit的路线：
+
+![image-20200725142326861](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725142326.png)
+
+成了！
 
 
 
-> 修改并提交
+> 分支并入
 
-第一次push的时候会要求提供gitee的用户名和密码，如果不慎填错，到这里修改:arrow_double_down:
+这里指的合并分支并不是普普通通的merge,我们用一张图来说明：
 
-<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200723233903.png" alt="image-20200723233903408" style="zoom:80%;" />
+![image-20200725143419474](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725143419.png)
 
+
+
+具体操作看过来：
+
+1. 首先确保dev和master处于同一个版本下
+
+   ```
+   git checkout master
+   git merge dev
+   
+   git checkout dev
+   git merge master
+   ```
+
+2. 切换到dev分支进行修改到达图中new feature的位置
+
+3. 切回master分支进行修改到达图中v2,0LTS版本
+
+   ![image-20200725145439007](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725145439.png)
+
+4. 切回dev分支，执行`git rebase master`
+
+   ![image-20200725200323700](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725200323.png)
+
+   相当于把dev的基石更换到了master最新版本上
+
+5. 现在切回master分支执行merge,把dev分支拉回来
+
+   ![image-20200725200511135](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200725200511.png)
+
+6. 此时已经完成对分支的“并入”
+
+
+
+> 
