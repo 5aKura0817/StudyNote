@@ -1,3 +1,11 @@
+# Git学习推荐阅读
+
+[Git教程 | 廖雪峰](https://www.liaoxuefeng.com/wiki/0013739516305929606dd18361248578c67b8067c8c017b000)
+
+[Pro Git](https://gitee.com/progit/)
+
+
+
 # 一、入门安装配置
 
 > 什么是Git?
@@ -152,7 +160,7 @@ add所有修改的文件到暂存区后，然后我们再次执行commit，进�
 
 > 实战三种reset
 
-首先我们要建立一个认识，我们所有的提交记录相当一个链表串在一起的，有一个HEAD指针就是指向我们的当前所在的分支。
+首先我们要建立一个认识，我们所有的提交记录相当一个链表串在一起的，有一个HEAD指针就是指向我们的当前所在的分支。而当前的分支指向本地最新的提交记录
 
 <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724135013.png" alt="image-20200724135013859" style="zoom:67%;" />
 
@@ -653,4 +661,5 @@ s b23fb5b 摸鱼第四天
 
 
 
-> 
+> 将commit提前，集中提交
+
