@@ -318,13 +318,6 @@ date			rank()		date_sub
 |  videos  |   上传视频数量   |
 | friends  |     好友数量     |
 
-```sql
-create table user(
-    userid string,
-    friends int
-)
-```
-
 
 
 > 影视表
@@ -340,11 +333,7 @@ create table user(
 |    rate     |           视频评分           |
 |   ratings   |             流量             |
 |  comments   |           评论数量           |
-| related ids |         相关视频的ID         |
-
-```sql
-
-```
+| related ids |    相关视频的ID（可为空）    |
 
 
 
@@ -365,3 +354,347 @@ create table user(
 
 
 
+## 三、数据清洗（ELT）
+
+当前我们所拿到的数据中存在个问题：
+
+1. 在**视频类别**和**相关视频ID**两个字段的数据，在数据结构描述中都属于**array类型**，但是真实数据中两者使用的间隔符并不一致！这样的数据在Hive导入数据的时候是不允许的，因为row format里面每类集合使用的间隔符是固定的！！
+2. 存在缺少字段的数据记录需要剔除
+
+
+
+我们使用一个MapReduce来完成一个简单的数据清洗：
+
+> Mapper阶段
+>
+> 由于数据中没有可以作为Key区分数据的字段，也不需要做合并汇总处理。
+> 所以Mapper的写出数据类型就采用NullWritable,Text;
+> 同时直接省去了Reducer
+
+```java
+public class ETLMapper extends Mapper<LongWritable, Text, NullWritable, Text> {
+
+    private Text valueOut = new Text();
+
+    @Override
+    protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+        String line = value.toString();
+
+        // 数据清洗
+        String str = ETLUtils.etlData(line);
+
+        if (str == null) {
+            return;
+        }
+        valueOut.set(str);
+        context.write(NullWritable.get(), valueOut);
+    }
+
+}
+```
+
+
+
+> 数据清洗工具类（ELTUtils）
+
+```java
+public class ETLUtils {
+    /**
+     * 1. 判断字段数 >=9
+     * 2. 去除第四个字段中多余的space
+     * 3. 从第10个"字段"开始 使用`&`连接
+     *
+     * @description 数据清洗
+     * @param data 原始数据
+     * @return 清洗后的数据
+     */
+    public static String etlData(String data) {
+        StringBuffer stringBuffer = new StringBuffer();
+
+        // 1.切割数据
+        String[] fields = data.split("\t");
+
+        // 2.过滤字段数
+        if (fields.length < 9) {
+            return null;
+        }
+
+        // 3.去除字段三中多余的space
+        fields[3] = fields[3].replaceAll(" ", "");
+
+        // 4.对所有字段进行重组，前九个字段(index=8)以 \t分割，第十个字段开始都使用 &分割
+        for (int i = 0; i < fields.length; i++) {
+            if (i < 9) {
+                stringBuffer.append(fields[i]).append("\t");
+                // 刚好只有9个字段，去除末尾的\t
+                if (i == fields.length - 1) {
+                    stringBuffer.deleteCharAt(stringBuffer.length()-1);
+                }
+            } else {
+                // index>=9 第十个字段开始统一使用'&'连接
+                stringBuffer.append(fields[i]).append("&");
+                // 去除末尾的 &
+                if (i == fields.length - 1) {
+                    stringBuffer.deleteCharAt(stringBuffer.length()-1);
+                }
+            }
+        }
+        data = stringBuffer.toString();
+        return data;
+    }
+}
+```
+
+
+
+> Driver类（普通写法）
+
+```java
+public class ETLDriver {
+    public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
+        Configuration conf = new Configuration();
+        Job job = Job.getInstance(conf);
+        job.setJarByClass(ETLDriver.class);
+        job.setMapperClass(ETLMapper.class);
+
+        job.setMapOutputKeyClass(NullWritable.class);
+        job.setMapOutputValueClass(Text.class);
+
+        job.setOutputKeyClass(NullWritable.class);
+        job.setOutputValueClass(Text.class);
+
+        FileInputFormat.setInputPaths(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+        
+        boolean result = job.waitForCompletion(true);
+        System.exit(result ? 0 : 1);
+    }
+}
+```
+
+> Driver标准写法  实现Tool接口
+
+```java
+public class ETLDriver implements Tool {
+
+    private Configuration conf;
+
+    @Override
+    public int run(String[] args) throws Exception {
+        Job job = Job.getInstance(conf);
+        job.setJarByClass(ETLDriver.class);
+        job.setMapperClass(ETLMapper.class);
+
+        job.setMapOutputKeyClass(NullWritable.class);
+        job.setMapOutputValueClass(Text.class);
+
+        job.setOutputKeyClass(NullWritable.class);
+        job.setOutputValueClass(Text.class);
+
+        FileInputFormat.setInputPaths(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        boolean result = job.waitForCompletion(true);
+        return result ? 0 : 1;
+    }
+
+    @Override
+    public void setConf(Configuration conf) {
+        this.conf = conf;
+    }
+
+    @Override
+    public Configuration getConf() {
+        return this.conf;
+    }
+
+    public static void main(String[] args) {
+        try {
+            ToolRunner.run(new ETLDriver(), args);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+之前我们直接在Main方法里面把所有配置写在一起，固然是没有问题也可以正常运行，但是==运行的时候是无法接受hadoop的参数的。==
+这种写法:
+
+- 实现`Tool`接口，并实现`run()`,`getConf()`,`setConf()`方法，之前大部分main方法写的东西都可以写到run方法中，==在源码中其实最终还是调用run()方法，只是中间做了一些配置参数的解析处理。==
+- main方法中调用`ToolRunner.run()`，传入一个Tool对象（即当前的Driver）和main方法的参数args
+
+查看源码，其实相比较于我们之前的写法，只是多做了一个配置解析工作：
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200729103229.png" alt="image-20200729103229577" style="zoom: 67%;" />
+
+正是这个配置解析工作，让我们==在集群上运行的时候能够额外接受Hadoop传来的参数。==
+
+
+
+> 集群运行
+
+将项目打包放到集群上，数据上传到HDFS上作为输入。
+
+```shell
+hadoop jar jars/guli-vedio-1.0.jar com.sakura.mr.ETLDriver /guliVideo/video /guliVideo/output
+# hadoop jar jar包路径 类全限名 参数1(输入数据) 参数2(输出路径) ...
+```
+
+
+
+
+
+## 四、建表数据导入
+
+> 建表语句
+
+- 影视表guliVideo
+
+  ```sql
+  create table gulivideo_video(
+      videoId string,
+      uploader string,
+      age int,
+      category array<string>,
+      length int,
+      views int,
+      rate float,
+      ratings int,
+      comments int,
+      relatedId array<string>
+  ) row format delimited
+  fields terminated by '\t'
+  collection items terminated by '&'
+  stored as textfile;
+  ```
+
+- 用户表guliuser
+
+  ```sql
+  create table gulivideo_user(
+      uploader string,
+      videos int,
+      friends int
+  ) row format delimited
+  fields terminated by '\t'
+  stored as textfile;
+  ```
+
+----
+
+> 数据导入
+
+```shell
+load data inpath '/guliVideo/output/part-r-00000' into table gulivideo;
+load data inpath '/guliVideo/user/' into table guliuser;
+```
+
+视频表的数据不要导错了！！是MR输出的数据！
+
+
+
+### ORC表创建和数据导入
+
+> 修改建表语句
+
+将建表语句中最后的`stored as textfile`改为`stored as orc`即可，我们将表名字设为
+
+- gulivideo_user_orc
+- gulivideo_user_orc
+
+> 从原始表导入数据
+
+`insert into table gulivideo_video_orc select * from gulivideo_video`
+
+`insert into talbe gulivideo_user_orc select * from gulivideo_user`
+
+> 为什么使用ORC格式数据表？
+
+参考Hive学习笔记中**8.2.2数据存储格式**，使用ORC格式存储数据由于==自带数据压缩功能==可以==减小数据的空间占用。==
+当前案例中200MB的数据文件使用orc格式存储占用空间不足100MB!!
+
+
+
+## 五、需求代码实现
+
+### 5.1、观看数Top10
+
+```sql
+select videoId,views
+from gulivideo_video_orc
+order by views DESC
+limit 10;
+```
+
+result:
+
+```
+dMH0bHeiRNg	42513417
+0XxI-hvPRRA	20282464
+1dmVU08zVpA	16087899
+RB-wUgnyGv0	15712924
+QjA5faZF1A8	15256922
+-_CSo1gOd48	13199833
+49IDp76kjPw	11970018
+tYnn51C3X_w	11823701
+pv5zWaTEVkI	11672017
+D2kJZOfq7zk	11184051
+```
+
+
+
+### 5.2、堆内存溢出解决
+
+> 这里可能出现堆内存溢出的问题，需要通过查看日志确定，并进行相应的修改！！
+>
+> ![image-20200729120126762](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200729120126.png)
+>
+> 查看日志信息：访问`hadoop103:8088`
+>
+> ![image-20200729120223864](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200729120223.png)
+>
+> 历史服务器的配置参看Hadoop的第一篇学习笔记，开启历史服务器
+>
+> `sbin/mr-jobhistory-daemon.sh start historyserver`
+>
+> ![image-20200729120842126](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200729120842.png)
+>
+> 进入查看log
+>
+> ![image-20200729120917431](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200729120917.png)
+>
+> ![image-20200729121017162](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200729121017.png)
+
+解决方式：
+
+在yarn-site.xml中加入以下配置，然后重启Hadoop集群
+
+```xml
+<property>
+	<name>yarn.scheduler.maximum-allocation-mb</name>
+    <value>2048</value>
+</property>
+<property>
+	<name>yarn.scheduler.minimum-allocation-mb</name>
+    <value>2048</value>
+</property>
+<property>
+	<name>yarn.nodemanager.vmen-pmen-ratio</name>
+    <value>2.1</value>
+</property>
+<property>
+	<name>mapred.child.java.opts</name>
+    <value>-Xmx1024m</value>
+</property>
+```
+
+
+
+> 然后又来一个错：
+>
+> ![image-20200729124045818](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200729124045.png)
+>
+> 建议把
+>
+> `yarn.nodemanager.vmen-pmen-ratio`或者`yarn.scheduler.minimum-allocation-mb`以及`yarn.scheduler.maximum-allocation-mb`继续调高。这里我测试使用2.8即可
