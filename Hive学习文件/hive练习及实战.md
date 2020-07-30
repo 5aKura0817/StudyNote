@@ -344,7 +344,7 @@ date			rank()		date_sub
 ## 二、需求描述
 
 1. 统计视频**观看数的Top10**
-2. 统计视频**类别的Top10**
+2. 统计视频**类别热度的Top10**
 3. 统计视频**观看数Top20的所有视频的所属类别，及其类别中包含的Top20中的视频个数****
 4. 统计视频**观看数Top50的视频的相关视频的类别排行**。
 5. 统计**每个类别中视频热度Top10**
@@ -698,3 +698,89 @@ D2kJZOfq7zk	11184051
 > 建议把
 >
 > `yarn.nodemanager.vmen-pmen-ratio`或者`yarn.scheduler.minimum-allocation-mb`以及`yarn.scheduler.maximum-allocation-mb`继续调高。这里我测试使用2.8即可
+
+
+
+
+
+### 5.3、视频类别热度的Top10
+
+首先我们将类别中的视频个数作为类别的热度，那么这个需求就分为两步：
+
+- 使用`explode()`将每个视频的类别单独分离
+- 对处理后的数据，按照视频类别分组，使用`count(*)`进行数量统计，然后倒序排序取前十
+
+```sql
+select
+    category_name,
+    count(*) category_count
+from
+    (
+       select
+            videoId,
+            category_name
+        from
+            gulivideo_video_orc
+            lateral view explode(category) tmp_category as category_name 
+    ) category_tbl
+group by 
+    category_name
+order by
+    category_count DESC
+limit
+    10;
+```
+
+result
+
+```
+category_name   category_count
+Music   179049
+Entertainment   127674
+Comedy  87818
+Animation   73293
+Film    73293
+Sports  67329
+Gadgets 59817
+Games   59817
+Blogs   48890
+People  48890
+```
+
+
+
+### 5.4、需求三
+
+统计视频观看数Top20的所有视频的所属类别，及其类别中包含的Top20中的视频个数。分三步完成：
+
+- 筛选出观看数前20的视频及其种类
+- 将种类分离
+- 对分离的类别做分组统计
+
+```sql
+select
+    category_name,
+    count(*) category_count
+from
+    (
+        select
+            videoId,
+            category_name
+        from
+            (
+                select
+                    videoId,
+                    category,
+                    views
+                from
+                    gulivideo_video_orc
+                order by 
+                    views DESC
+                limit 20
+            ) tmp_video
+            lateral view explode(tmp_video.category) tmp_category as category_name
+    ) tmp_category
+group by
+    category_name;
+```
+
