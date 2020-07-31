@@ -618,7 +618,9 @@ load data inpath '/guliVideo/user/' into table guliuser;
 
 ## 五、需求代码实现
 
-### 5.1、观看数Top10
+### 5.1、需求一
+
+观看数Top10的视频
 
 ```sql
 select videoId,views
@@ -703,7 +705,9 @@ D2kJZOfq7zk	11184051
 
 
 
-### 5.3、视频类别热度的Top10
+### 5.3、需求二
+
+视频类别热度的Top10
 
 首先我们将类别中的视频个数作为类别的热度，那么这个需求就分为两步：
 
@@ -782,5 +786,222 @@ from
     ) tmp_category
 group by
     category_name;
+```
+
+
+
+### 5.5、需求四
+
+统计视频观看数Top50的视频的相关视频的类别排行(Rank)。分以下五个步骤：
+
+- 取出播放量Top50的视频以及相关视频ID(relatedId)
+- 对相关视频的ID进行拆分，并使用groupby去重（这里不推荐使用distinc，参考hive学习笔记 9.3.5）
+- 关联原表（join）取出所有相关视频的类别
+- 对类别进行拆分
+- 分组统计类别，使用rank() over()进行排名
+
+```sql
+select
+    category_name,
+    count(*) category_count,
+    rank() over(order by count(*) DESC) category_rank
+from
+    (
+        select
+            explode(category) category_name 
+        from
+            (    
+                select
+                    category
+                from
+                    (
+                        select
+                            related_id
+                        from
+                            (
+                                select
+                                    relatedId,
+                                    views
+                                from
+                                    gulivideo_video_orc
+                                order by
+                                    views DESC
+                                limit 50
+                            )t1
+                            lateral view explode(relatedId) tmp_related as related_id
+                        group by
+                            related_id
+                    )t2
+                join 
+                    gulivideo_video_orc video
+                on
+                    t2.related_id=video.videoId
+            )t3
+    )t4
+group by
+    category_name;
+```
+
+result
+
+```
+category_name	category_count	category_rank
+Comedy	232	1
+Entertainment	216	2
+Music	195	3
+Blogs	51	4
+People	51	4
+Film	47	6
+Animation	47	6
+News	22	8
+Politics	22	8
+Games	20	10
+Gadgets	20	10
+Sports	19	12
+Howto	14	13
+DIY	14	13
+UNA	13	15
+Places	12	16
+Travel	12	16
+Animals	11	18
+Pets	11	18
+Autos	4	20
+Vehicles	4	20
+```
+
+
+
+### 5.6、需求五、六、八
+
+统计每个类别中视频热度Top10、
+统计每个类别中视频流量Top10、
+统计每个类别视频观看数Top10。
+三个需求都设计了对类别的分组，也就是基本上我们都需要对类别进行拆分，==像这样多次复用的表，我们可以创建一个临时表来存储数据，以减小MR任务的负担。==
+
+
+
+`gulivideo_category`表
+
+```sql
+create table gulivideo_category(
+    videoId string,
+    uploader string,
+    age int,
+    categoryName string,
+    length int,
+    views int,
+    rate float,
+    ratings int,
+    comments int,
+    relatedId array<string>
+) row format delimited
+fields terminated by '\t'
+collection items terminated by '&'
+stored as orc;
+
+-- 插入数据
+insert into gulivideo_category
+select 
+	videoId,
+    uploader,
+    age,
+    categoryName,
+    length,
+    views,
+    rate,
+    ratings,
+    comments,
+    relatedId
+from
+	gulivideo_video_orc
+	lateral
+```
+
+
+
+三个需求都过程都差不多，这里以需求八作为示范：
+
+```sql
+select
+    categoryName,
+    videoId,
+    views
+from
+    (
+        select
+            categoryName,
+            videoId,
+            views,
+            rank() over(partition by categoryName order by views DESC) rk_views
+        from
+            gulivideo_category
+    )
+    t1
+where
+    rk_views<=10;
+```
+
+==这种类型的需求(分组TopN)，一般可以通过使用`over()`开窗计算，先将数据分组(partition)然后使用排序(order)==
+
+
+
+### 5.7、需求七
+
+统计上传视频数量的用户Top10，以及他们上传的视频在观看次数前20的视频中的数量。
+
+这个需求的表述并不明确，我们暂定为：**上传视频数量Top10用户的所有上传视频的播放量的Top20的视频。**
+
+- 取出上传数量Top10的用户
+- 关联video表取出这些用户的所有上传视频，按照观看数分类并取出Top20
+
+```sql
+select
+    video.videoId,
+    video.views,
+    t1.uploader
+from
+    (
+        select
+            uploader,
+            videos
+        from
+            gulivideo_user_orc
+        order by
+            videos DESC
+        limit 10
+    )t1
+join
+    gulivideo_video_orc video
+on
+    t1.uploader=video.uploader
+order by
+    views DESC
+limit 20;
+```
+
+result:
+
+```
+video.videoid	video.views	t1.uploader
+-IxHBW0YpZw	39059	expertvillage
+BU-fT5XI_8I	29975	expertvillage
+ADOcaBYbMl0	26270	expertvillage
+yAqsULIDJFE	25511	expertvillage
+vcm-t0TJXNg	25366	expertvillage
+0KYGFawp14c	24659	expertvillage
+j4DpuPvMLF4	22593	expertvillage
+Msu4lZb2oeQ	18822	expertvillage
+ZHZVj44rpjE	16304	expertvillage
+foATQY3wovI	13576	expertvillage
+-UnQ8rcBOQs	13450	expertvillage
+crtNd46CDks	11639	expertvillage
+D1leA0JKHhE	11553	expertvillage
+NJu2oG1Wm98	11452	expertvillage
+CapbXdyv4j4	10915	expertvillage
+epr5erraEp4	10817	expertvillage
+IyQoDgaLM7U	10597	expertvillage
+tbZibBnusLQ	10402	expertvillage
+_GnCHodc7mk	9422	expertvillage
+hvEYlSlRitU	7123	expertvillage
 ```
 
