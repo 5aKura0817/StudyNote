@@ -718,4 +718,765 @@ Sink创建一个事务，使用`doTake`将Event从Channel队列批次取出放�
 
 ---
 
-了解这些方法的调用过程和事务的执行过程，是==便于我们后续编写自定义Source、Sink时调用对应的方法来用代码实现事务功能。==
+了解这些方法的调用过程和事务的执行过程，是==便于我们后续编写自定义Source、Sink时调用对应的方法来用代码实现事务功能。== 
+
+
+
+
+
+## 3.2、Agent内部原理
+
+参考博客：
+
+[Flume Agent 内部原理概述](https://www.jianshu.com/p/c57e43424813)
+
+[Flume Sink组、Sink处理器](https://www.jianshu.com/p/d50ab471c012)
+
+> 基础架构复习
+
+Flume Agent中包含三大组件：Source、Channel、Sink。
+
+以上三个组件都运行在Agent(一个JVM应用程序)上，且数量没有限制！
+**每个Source至少对接一个Channel，每个Sink只能对接一个Channel，但是每个Channel可以对接多个Source以及多个Sink!!**
+
+**数据在Flume中间传输以事件（Event）作为基本单位，Event的数据结构包含头部信息(Header)和数据体(Body)**
+
+
+
+> 新内容导入
+
+接下来我们会将Event在Flume中传输的过程进行拆分，了解学习内部的原理，需要引入以下几个新的概念：
+
+- Channel处理器（Channel Processor）
+- 拦截器（Interceptor）
+- Channel选择器（ChannelSelector）
+- Sink组（SinkGroup）
+- Sink运行器（Sink Runner）
+- Sink处理器（SinkProcessor）
+
+我们先用两张图来看一下他们之间的运作流程：
+
+Source和Channel交互：
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200803124245.png" alt="image-20200803124245387" style="zoom:67%;" />
+
+Channel和Sink交互：
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200803130946.png" alt="image-20200803130946602" style="zoom:67%;" />
+
+
+
+简述以下Agent中工作流程：
+
+1. Source从特定的位置读取到数据并封装为Event对象
+
+2. 封装好的批次Event，交给ChannelProcessor（每个Source都有自己的ChannelProcessor）
+
+3. Channel处理器会将这些Event使用拦截器做一遍过滤，筛选出符合要求的Event，返回到Channel处理器
+
+4. Channel处理器访问ChannelSelector，通过选择器来确定这些Event发到哪个Channel中
+
+   ==ChannelSelector官方提供了两种分别对应两种选择策略，同时**支持自定义**！！==
+
+   `Replicating Channel Selector (default)`: 所有与Source绑定的Channel都发送
+
+   `Multiplexing Channel Selector`：自定义Source的数据发往那些Channel
+
+5. Channel接收到Event后，与SinkRunner对接，每个SinkRunner运行一个Sink组，一般Sink组用于RPC Sink，在层之间以负载均衡或者故障转移方式交发送数据
+
+6. 每个Sink组中可以有多个Sink，组中每个Sink单独配置，包括从哪个Channel中拉取数据等。
+
+7. SinkProcessor决定了对应的Sink组中哪个Sink来拉取哪个Channel中的数据
+   ==SinkProcessor官方有三种，也支持自定义==
+
+   `Default Sink Processor`:只有一个Sink,不强制要求Sink组
+
+   `Failover Sink Processor`: 故障转移
+
+   `Load Balance Processor`: 负载均衡
+
+
+
+
+
+## 3.3、拓扑结构
+
+当需要跨机器去读取数据时候，就需要在不同的机器上运行Agent，Agent之间的信息传递就需要使用网络拓扑，官网给出了三种拓扑结构。
+
+### 3.3.1、简单串联
+
+![Two agents communicating over Avro RPC](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200803150917.png)
+
+在节点之间交换数据的时候，通常会用到AVRO Sink和AVRO Source，分别设置在两个Agent中，然后通过AVRO RPC进行数据传输！两个节点就能被串联起来，方便取数据。
+
+
+
+### 3.3.2、合并（Consolidation）
+
+![A fan-in flow using Avro RPC to consolidate events in one place](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200803153105.png)
+
+通过图就能理解，当需要从多个位置（节点）读取数据的时候，此种拓扑结构可以很好地解决这个问题，有两种实现方式：
+
+- 可以是多个节点往固定的端口发送数据然后使用一个Agent在端口接收数据进行合并
+- 也可以是多个节点各自选择端口，然后Agent使用多个Source来从这些端口中接受数据进行合并
+
+
+
+### 3.3.3、多路复用
+
+![A fan-out flow using a (multiplexing) channel selector](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200803153507.png)
+
+当一个位置的数据想要发送到多个目的地。这种拓扑结构就能解决问题，但是明显ChannelSelector就要使用默认的ReplicatingChannelSelector
+
+
+
+### 3.3.4、负载均衡和故障转移
+
+其拓扑结构刚好**与合并相反**，使用一台接收事件，然后使用Sink组转发到多个的Agent中去完成写出的工作。多个Agent增大了缓存Event的数量，降低了单个Agent的写出压力，并且提高了可用性。
+
+---
+
+
+
+## 3.4、开发案例
+
+### （一）、复制以及多路复用
+
+> 案例描述：
+
+启动三个Flume Agent，其中**Agent1**负责监控文件的变动，使用**AVRO RPC**与Agent2进行数据交换，**Agent2**将采集的数据写入HDFS，同时Agent1与Agent3同样使用AVRO RPC进行数据交换，**Agent3**将采集数据写入本地文件夹
+
+图示：
+
+![image-20200803183029889](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200803183029.png)
+
+看到这个图会不会很好奇，在Agent1中同样是数据为什么需要两个MemoryChannel和Sink,这就涉及到我们所说的**Sink组**了，同一个Sink组中除了默认的SinkProcessor外，就只有负载均衡和故障转移的SinkProcessor了，注定同一个Sink组中的所有Sink的写出位置都是相同的，那么==想要写到不同的位置就需要多个Sink组。==
+
+
+
+> 配置清单与配置文件
+
+**FileRoll Sink:**
+
+![image-20200803172019939](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200803172020.png)
+
+
+
+**Avro Sink:**
+
+![image-20200803172109147](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200803172109.png)
+
+
+
+**Avro Source:**
+
+![image-20200803172212110](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200803172212.png)
+
+
+
+可以看出AVRO是专门一套用于节点端口数据传递的 Source和Sink,其配置和NetCat十分相似！
+由于是三个Agent，所以就需要三个配置文件：
+
+Agent1:
+
+```markdown
+# 组件命名
+a1.sources = r1
+a1.channels = c1 c2
+a1.sinks = k1 k2
+
+# source配置（TailDir Source）
+a1.sources.r1.type = TAILDIR
+a1.sources.r1.filegroups = file1
+a1.sources.r1.filegroups.file1 = /opt/module/data/flume_data/example1.log
+a1.sources.r1.positionFile=/opt/module/flume-1.7.0/positionFile/example1_position.json
+
+# sink配置（AVRO Sink）
+a1.sinks.k1.type = avro
+a1.sinks.k1.hostname = hadoop102
+a1.sinks.k1.port = 4545
+
+a1.sinks.k2.type = avro
+a1.sinks.k2.hostname = hadoop102
+a1.sinks.k2.port = 4646
+
+# Channel配置 （MemoryChannel）
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 1000
+a1.channels.c1.transactionCapacity = 100
+
+a1.channels.c2.type = memory
+a1.channels.c2.capacity = 1000
+a1.channels.c2.transactionCapacity = 100
+
+# 对接Channel
+a1.sources.r1.channels = c1 c2
+a1.sinks.k1.channel = c1
+a1.sinks.k2.channel = c2
+```
+
+Agent2:
+
+```markdown
+# 组件命名
+a2.sources = r1
+a2.channels = c1
+a2.sinks = k1
+
+# Source配置 （AVRO Source）
+a2.sources.r1.type = avro
+a2.sources.r1.bind = hadoop102
+a2.sources.r1.port = 4545
+
+# Sink配置
+a2.sinks.k1.type = hdfs
+a2.sinks.k1.hdfs.path=hdfs://hadoop102:9000/flume/%Y%m%d/%H
+    # 文件前缀
+a2.sinks.k1.hdfs.filePrefix=log-
+    # 文件夹滚动
+a2.sinks.k1.hdfs.round=true
+a2.sinks.k1.hdfs.roundValue=1
+a2.sinks.k1.hdfs.roundUnit=hour
+    # 使用本地时间戳
+a2.sinks.k1.hdfs.useLocalTimeStamp=true
+    # 批处理最大数量
+a2.sinks.k1.hdfs.batchSize=1000
+    # 文件存储类型
+a2.sinks.k1.hdfs.fileType=DataStream
+    # 文件滚动
+a2.sinks.k1.hdfs.rollInterval=60
+a2.sinks.k1.hdfs.rollSize=134217700
+a2.sinks.k1.hdfs.rollCount=0
+
+# Channel配置 （MemoryChannel）
+a2.channels.c1.type = memory
+a2.channels.c1.capacity = 1000
+a2.channels.c1.transactionCapacity = 100
+
+# 对接Channel
+a2.sources.r1.channels = c1
+a2.sinks.k1.channel = c1
+```
+
+Agent3:
+
+```markdown
+# 组件命名
+a3.sources = r1
+a3.channels = c1
+a3.sinks = k1
+
+# Source配置 （AVRO Source）
+a3.sources.r1.type = avro
+a3.sources.r1.bind = hadoop102
+a3.sources.r1.port = 4646
+
+# Sink配置 （File Roll Sink）
+a3.sinks.k1.type = file_roll
+a3.sinks.k1.sink.directory = /opt/module/flume-1.7.0/files/
+
+# Channel配置 （MemoryChannel）
+a3.channels.c1.type = memory
+a3.channels.c1.capacity = 1000
+a3.channels.c1.transactionCapacity = 100
+
+# 对接Channel
+a3.sources.r1.channels = c1
+a3.sinks.k1.channel = c1
+```
+
+
+
+> 启动测试
+
+==注意启动顺序！！先启动下游！ARVO RPC中 AVRO Source是服务端，AVRO Sink是客户端。==
+
+`bin/flume-ng agent -n a3 -c conf/ -f job/example1/agent3.conf`
+
+`bin/flume-ng agent -n a2 -c conf/ -f job/example1/agent2.conf`
+
+`bin/flume-ng agent -n a1 -c conf/ -f job/example1/agent1.conf`
+
+
+
+测试情况：
+
+RollFileSink的输出文件夹下每30秒生成一个文件，文件中只有变化的内容，若没有对监控文件修改也会生成文件但是内容为空！
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200803193848.png" alt="image-20200803193847988" style="zoom:67%;" />
+
+HDFS上成功生成文件记录着修改内容：
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200803193941.png" alt="image-20200803193941510" style="zoom:67%;" />
+
+----
+
+
+
+
+
+### （二）、负载均衡和故障转移
+
+> 故障转移案例
+
+配置三个Flume Agent，Agent1使用NetCat Source接受数据，然后使用**Sink组** 使用两个AVRO Sink与Agent2、Agent3连接，Agent2和Agent3将接受数据输出到控制台（logger Sink）。期间停掉Agent2或Agent3中任意一台，查看变化。
+
+![image-20200804092649035](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200804092649.png)
+
+
+
+> FailOver Sink Processor配置清单
+
+![image-20200804091435032](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200804091435.png)
+
+
+
+根据文档中所给的提示：**要创建一个Sink Group，并且为其中每个Sink指定一个唯一的priority（优先级），优先级越高优先从Channel中拉取事件。**
+
+`maxpenalty`：故障转移的时间上限。（默认30000ms=30s）意思是：从知道机器挂掉后**最长**30s内都不会去尝试给这个Agent发送数据（即使30s内已经恢复），30s后才会重新尝试建立连接发送数据。
+
+
+
+> 三个配置文件
+
+Agent1
+
+```markdown
+# 组件命名
+a1.sources = r1
+a1.sinks = k1 k2
+a1.channels = c1
+
+# Source配置 NetCat
+a1.sources.r1.type = netcat
+a1.sources.r1.bind = hadoop102
+a1.sources.r1.port = 44444
+
+# Sink配置 AVRO Sink
+a1.sinks.k1.type = avro
+a1.sinks.k1.hostname = hadoop102
+a1.sinks.k1.port = 4545
+
+a1.sinks.k2.type = avro
+a1.sinks.k2.hostname = hadoop102
+a1.sinks.k2.port = 4646
+
+# Channel配置 MemoryChanne
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 1000
+a1.channels.c1.transactionCapacity = 100
+
+# 对接Channel
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+a1.sinks.k2.channel = c1
+
+# FailOver Processor配置
+a1.sinkgroups = g1
+a1.sinkgroups.g1.sinks = k1 k2
+a1.sinkgroups.g1.processor.type = failover
+a1.sinkgroups.g1.processor.priority.k1 = 5
+a1.sinkgroups.g1.processor.priority.k2 = 10
+a1.sinkgroups.g1.processor.maxpenalty = 10000
+```
+
+
+
+Agent2:
+
+```markdown
+a2.sources = r1
+a2.sinks = k1
+a2.channels = c1
+
+# Source配置 AVRO Source
+a2.sources.r1.type = avro
+a2.sources.r1.bind = hadoop102
+a2.sources.r1.port = 4545
+
+# Sink配置 Logger Sink
+a2.sinks.k1.type = logger
+
+# Channel配置 MemoryChannel
+a2.channels.c1.type = memory
+a2.channels.c1.capacity = 1000
+a2.channels.c1.transactionCapacity = 100
+
+# 对接Channel
+a2.sources.r1.channels = c1
+a2.sinks.k1.channel = c1
+```
+
+Agent3相同，只需修改agent名字和 AVRO Source接收的端口就行了。。此次省略
+
+
+
+> 启动测试
+
+![image-20200804095036080](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200804095036.png)
+
+存活Agent中优先级最高的拉取数据。
+由于故障挂掉的Agent重启之后，仍然可以接收数据！！
+
+在Flume的日志文件中，就能看到当我们关闭Agent的时候，会提示Agent被加入到了FailOver List:
+
+![image-20200804100119323](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200804100119.png)
+
+
+
+---
+
+
+
+> 负载均衡（LoadBalance Processor）配置清单：
+
+![image-20200804105311875](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200804105311.png)
+
+简直不要太简单！！！完全可以使用官方给出的配置，默认使用轮询进行负载均衡！
+
+这里的backoff关联到**退避算法**，是对Agent挂掉后机器选择的一种策略，建议开启。
+
+----
+
+
+
+### （三）、聚合（Consolidation）
+
+> 案例描述
+
+还是三个Agent，不过这次不同三个Agent分布在三台主机上，Agent1接收NetCat监听端口发送的数据，Agent2使用TailDir监控文件，两者使用AVRO Sink与Agent3建立连接，Agent3做聚合处理，将接受的数据输出到控制台
+
+![image-20200804144820912](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200804144821.png)
+
+
+
+> 配置文件
+
+Agent1
+
+```markdown
+# 组件命名
+a1.sources = r1
+a1.channels = c1
+a1.sinks = k1
+
+# Source配置 TailDir Source
+a1.sources.r1.type = TAILDIR
+a1.sources.r1.filegroups = f1
+a1.sources.r1.filegroups.f1 = /opt/module/data/flume_data/example3.log
+a1.sources.r1.positionFile = /opt/module/flume-1.7.0/positionFile/example3_position.json
+
+# Sink配置 AVRO Sink
+a1.sinks.k1.type = avro
+a1.sinks.k1.hostname = hadoop104
+a1.sinks.k1.port = 4545
+
+# Channel配置 MemoryChannel
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 1000
+a1.channels.c1.transactionCapacity = 100
+
+# 对接Channe
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+```
+
+
+
+Agent2
+
+```markdown
+# 组件命名
+a2.sources = r1
+a2.channels = c1
+a2.sinks = k1
+
+# Source配置 NetCat Source
+a2.sources.r1.type = netcat
+a2.sources.r1.bind = hadoop102
+a2.sources.r1.port = 44444
+
+# Sink配置 AVRO Sink
+a2.sinks.k1.type = avro
+a2.sinks.k1.hostname = hadoop104
+a2.sinks.k1.port = 4545
+
+# Channel配置 MemoryChannel
+a2.channels.c1.type = memory
+a2.channels.c1.capacity = 1000
+a2.channels.c1.transactionCapacity = 100
+
+# 对接Channe
+a2.sources.r1.channels = c1
+a2.sinks.k1.channel = c1
+```
+
+
+
+Agent3
+
+```markdown
+# 组件命名
+a3.sources = r1
+a3.channels = c1
+a3.sinks = k1
+
+# Source配置 AVRO Source
+a3.sources.r1.type = avro
+a3.sources.r1.bind = hadoop104
+a3.sources.r1.port = 4545
+
+# Sink配置 Logger Sink
+a3.sinks.k1.type = logger
+
+# Channel配置 MemoryChannel
+a3.channels.c1.type = memory
+a3.channels.c1.capacity = 1000
+a3.channels.c1.transactionCapacity = 100
+
+# 对接Channe
+a3.sources.r1.channels = c1
+a3.sinks.k1.channel = c1
+```
+
+
+
+> 启动测试
+
+![image-20200804153212711](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200804153212.png)
+
+这只是实现方式的中的一种：
+
+- ==需要合并的Agent往合并Agent所在的主机的同一个端口发送数据，用于合并的Agent从那个端口中取数据进行集中输出。==
+
+还有一种就是：
+
+- ==需要合并的Agent自定义选择合并Agent所在主机的端口，然后用于Agent从这些个端口中取出数据然后进行集中输出。==
+
+
+
+---
+
+
+
+## 3.5、自定义Interceptor(拦截器)
+
+
+
+> 拦截器
+
+首先拦截器是什么不用多说了吧，字面意义上很容易理解，就是把xx拦住，然后做一些不可描述的事情【坏笑】，然后放行。或者说直接原路打回，不处理。
+
+==在Flume中拦截器作用于Event，不可描述的操作就是在Event的头部(Header)添加一些东西，或者也可以修改Body部分。==
+
+使用拦截器在Header中添加一些KV键值对后，就可以方便后续配合使用`Multiplexing Channel Selector`，利于对Event的分类。
+
+
+
+> 为什么Flume需要拦截器？
+
+小小Flume,一个数据传输的中间件，为什么要用拦截器大做文章？
+
+**首先，生产环境中我们使用Flume采集的多方数据，我们希望这些数据能够被区分开来放到不同的位置！！**
+杠精：那你就用独立的Agent串联啊，哪个地方的到哪去一条条线写清楚不就能控制了！
+
+**其次，这些数据中存在脏数据我们需要剔除**
+杠精：这。。。
+
+**最后，我们希望即使是发到同一个目的地（例如HDFS），也能够按照数据的内容进行分类然后放到不同的位置（例如不同目录）**
+杠精：拦截器，算你nb
+
+
+
+==拦截器配置Multiplexing Channel Selector实现多路复用，就可以完美解决上面这些需求！！==
+拦截器在头部添加标志，多路选择器根据头部的标志信息，决定Event去向的Channel。
+
+
+
+> Interceptor接口
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200804195143.png" alt="image-20200804195143082" style="zoom:67%;" />
+
+四个方法：
+
+- `initalize()`初始化方法，每次使用拦截器只调用一次
+- `intercept(Event event)`对单个事件的拦截处理
+- `intercept(List<Event> eventList)`对批事件的处理
+- `close()`拦截器使用结束，用于关闭释放资源
+
+内部还有一个接口，在我们实现的时候，也要对应创建一个内部类实现此接口（Builder）并重写两个方法
+
+- `build()`用于实例化拦截器
+- `configure()`用于配置拦截器的相关一些额外配置
+
+
+
+
+
+已有的实现类：
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200804200422.png" alt="image-20200804200422383" style="zoom: 80%;" />
+
+---
+
+
+
+> 代码自定义实现拦截器
+
+**案例需求描述**：
+
+自定义一个拦截器，并结合使用Multiplexing Channel Selector，判断Event中的数据内容是否包含"hello"单词，如果包含则输出到控制台，若果不包含就放到其他位置。
+
+其中涉及到**Multiplexing Channel Selector的配置以及自定义拦截器的配置，**我们稍后再说。
+
+
+
+对了，我们先来看看Event类的操作和使用：
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200804200848.png" alt="image-20200804200848835" style="zoom:80%;" />
+
+四个方法简洁明了。傻子都能看得懂了吧！！！
+
+
+
+**自定义拦截器类**
+
+```java
+public class HelloInterceptor implements Interceptor {
+    
+    /**
+     * 用于批事件处理方法的返回列表
+     */
+    private List<Event> handledEvents;
+
+    @Override
+    public void initialize() {
+        handledEvents = new ArrayList<>();
+    }
+
+    /**
+     * 处理单个事件
+     * @param event
+     * @return
+     */
+    @Override
+    public Event intercept(Event event) {
+        // 获取事件的头部
+        Map<String, String> headers = event.getHeaders();
+        // 获取时间的数据本体
+        String body = new String(event.getBody());
+
+        // 判断数据内容
+        if (body.contains("hello")) {
+            headers.put("hasHello", "Y");
+        } else {
+            headers.put("hasHello", "N");
+        }
+        return event;
+    }
+
+    /**
+     * 批事件处理
+     * @param list
+     * @return
+     */
+    @Override
+    public List<Event> intercept(List<Event> list) {
+        // 1.清空列表
+        handledEvents.clear();
+        // 2.循环调用单事件处理的方法
+        list.forEach(x -> handledEvents.add(intercept(x)));
+
+        return handledEvents;
+    }
+
+    @Override
+    public void close() {
+
+    }
+
+    public static class Builder implements Interceptor.Builder {
+
+        /**
+         * @return
+         * 实例化拦截器
+         */
+        @Override
+        public Interceptor build() {
+            return new HelloInterceptor();
+        }
+
+        @Override
+        public void configure(Context context) {
+        }
+    }
+}
+```
+
+这就是一个简单的Interceptor实现啦。下一步就是Agent的配置了！
+
+
+
+先上图：
+
+![image-20200804203417479](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200804203417.png)
+
+
+
+> Multiplexing Channel Selector配置以及拦截器的配置
+
+先看多路选择器的配置清单：
+
+![image-20200804203556536](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200804203556.png)
+
+官方案例：
+
+```properties
+a1.sources = r1
+a1.channels = c1 c2 c3 c4
+a1.sources.r1.selector.type = multiplexing
+a1.sources.r1.selector.header = state
+a1.sources.r1.selector.mapping.CZ = c1
+a1.sources.r1.selector.mapping.US = c2 c3
+a1.sources.r1.selector.default = c4
+```
+
+重点关注一下最后四行，倒数二三行像是给mapping中 CZ和US指定了Channel！！这正是我们想要的！！倒数第四行还有一个header中取出的state，莫非?? 莫非!? 莫非?! 莫非!!
+对！！==其实CZ和US只是header中名为state的key所对应的两个value==!!所以说结合多路选择器就可以按照头部的标记决定Event的去向！！
+
+那么按照我们的拦截器代码就能推出我们要配置的多路选择器配置内容：
+
+```properties
+a1.sources = r1
+a1.channels = c1 c2
+a1.sources.r1.selector.type = multiplexing
+a1.sources.r1.selector.header = hasHello
+a1.sources.r1.selector.mapping.Y = c1
+a1.sources.r1.selector.mapping.N = c2
+a1.sources.r1.selector.default = c1
+```
+
+
+
+自定义拦截器如何配置？
+
+官方文档案例：
+
+==小知识：文档中反复提起的FQCN，全拼是fully qualified class name（全限定类名）==
+
+```properties
+a1.sources = r1
+a1.sinks = k1
+a1.channels = c1
+# 拦截器命名
+a1.sources.r1.interceptors = i1 i2
+# 拦截器的类型（使用已有的拦截器类型 或者 自定义类的全限定类名$Builder）
+a1.sources.r1.interceptors.i1.type = org.apache.flume.interceptor.HostInterceptor$Builder
+# 以下省略...
+a1.sources.r1.interceptors.i1.preserveExisting = false
+a1.sources.r1.interceptors.i1.hostHeader = hostname
+a1.sources.r1.interceptors.i2.type = org.apache.flume.interceptor.TimestampInterceptor$Builder
+a1.sinks.k1.filePrefix = FlumeData.%{CollectorHost}.%Y-%m-%d
+a1.sinks.k1.channel = c1
+```
+
+
+

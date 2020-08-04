@@ -3719,7 +3719,6 @@ hive (default)> set hive.exec.dynamic.partition.mode;
 hive.exec.dynamic.partition.mode=strict
 
 hive (default)> set hive.exec.dynamic.partition.mode=nonstrict;
-
 ```
 
 ![image-20200722220336870](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200722220336.png)
