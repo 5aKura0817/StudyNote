@@ -293,7 +293,7 @@ a1.sources.r1.type = netcat
 
 
 
-### 2.2.3、升级版
+### 2.2.3、监控文件 升级版
 
 将控制台的输出内容转移输出到HDFS上！
 
@@ -1259,8 +1259,6 @@ a3.sinks.k1.channel = c1
 
 ## 3.5、自定义Interceptor(拦截器)
 
-
-
 > 拦截器
 
 首先拦截器是什么不用多说了吧，字面意义上很容易理解，就是把xx拦住，然后做一些不可描述的事情【坏笑】，然后放行。或者说直接原路打回，不处理。
@@ -1479,4 +1477,519 @@ a1.sinks.k1.channel = c1
 ```
 
 
+
+> 配置启动
+
+1. 把写好的拦截器程序打包放到flume的lib目录下
+
+2. 三个配置文件：
+
+   Agent1:
+
+   ```markdown
+   # 组件命名
+   a1.sources = r1
+   a1.channels = c1 c2
+   a1.sinks = k1 k2
+   
+   # Source配置 NetCat Source
+   a1.sources.r1.type = netcat
+   a1.sources.r1.bind = hadoop102
+   a1.sources.r1.port = 44444
+   
+   # Sink配置 AVRO Sink
+   a1.sinks.k1.type = avro
+   a1.sinks.k1.hostname = hadoop103
+   a1.sinks.k1.port = 4545
+   
+   a1.sinks.k2.type = avro
+   a1.sinks.k2.hostname = hadoop104
+   a1.sinks.k2.port = 4545
+   
+   # Channel配置 MemoryChannel
+   a1.channels.c1.type = memory
+   a1.channels.c1.capacity = 1000
+   a1.channels.c1.transactionCapacity = 100
+   
+   a1.channels.c2.type = memory
+   a1.channels.c2.capacity = 1000
+   a1.channels.c2.transactionCapacity = 100
+   
+   # ChannelSelector配置 MultiplexingChannelSelector
+   a1.sources.r1.selector.type = multiplexing
+   a1.sources.r1.selector.header = hasHello
+   a1.sources.r1.selector.mapping.Y = c1
+   a1.sources.r1.selector.mapping.N = c2
+   
+   # Interceptor配置 HelloInterceptor
+   a1.sources.r1.interceptors = i1
+   a1.sources.r1.interceptors.i1.type = com.sakura.interceptor.HelloInterceptor$Builder
+   
+   # Channel对接
+   a1.sources.r1.channels = c1 c2
+   a1.sinks.k1.channel = c1
+   a1.sinks.k2.channel = c2
+   ```
+
+   Agent2:
+
+   ```markdown
+   # 组件命名
+   a2.sources = r1
+   a2.channels = c1
+   a2.sinks = k1
+   
+   # Source配置 AVRO Source
+   a2.sources.r1.type = avro
+   a2.sources.r1.bind = hadoop103
+   a2.sources.r1.port = 4545
+   
+   # Sink配置 LoggerSink
+   a2.sinks.k1.type = logger
+   
+   # Channel配置 MemoryChannel
+   a2.channels.c1.type = memory
+   a2.channels.c1.capacity = 1000
+   a2.channels.c1.transactionCapacity = 100
+   
+   # 对接Channel
+   a2.sources.r1.channels = c1
+   a2.sinks.k1.channel = c1
+   ```
+
+   Agent3配置文件与Agent2大致相同，修改avro source的bind和agent的名字就可以了，这里省略。。
+
+3. 启动
+
+   先2,3后1
+
+
+
+> 测试结果：
+
+![image-20200805094958495](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200805094958.png)
+
+----
+
+
+
+
+
+## 3.6、自定义Source
+
+> 为什么要自定义Source?
+
+虽然官方提供了很多可选的Source，但是依然不足以满足我们的业务需求，所以官方也给出了自定义Source的方案，我们可以通过固定的逻辑框架来实现独属于我们的Source。
+
+> 官方的自定义Source模板
+
+```java
+public class MySource extends AbstractSource implements Configurable, PollableSource {
+  private String myProp;
+
+  @Override
+  public void configure(Context context) {
+    String myProp = context.getString("myProp", "defaultValue");
+
+    // Process the myProp value (e.g. validation, convert to another type, ...)
+
+    // Store myProp for later retrieval by process() method
+    this.myProp = myProp;
+  }
+
+  @Override
+  public void start() {
+    // Initialize the connection to the external client
+  }
+
+  @Override
+  public void stop () {
+    // Disconnect from external client and do any additional cleanup
+    // (e.g. releasing resources or nulling-out field values) ..
+  }
+
+  @Override
+  public Status process() throws EventDeliveryException {
+    Status status = null;
+
+    try {
+      // This try clause includes whatever Channel/Event operations you want to do
+
+      // Receive new data
+      Event e = getSomeData();
+
+      // Store the Event into this Source's associated Channel(s)
+      getChannelProcessor().processEvent(e);
+
+      status = Status.READY;
+    } catch (Throwable t) {
+      // Log exception, handle individual exceptions as needed
+
+      status = Status.BACKOFF;
+
+      // re-throw all Errors
+      if (t instanceof Error) {
+        throw (Error)t;
+      }
+    } finally {
+      txn.close();
+    }
+    return status;
+  }
+}
+```
+
+整个代码的重点在于`process()`方法，透过这个方法我们能看到之前我们在Flume事务和Agent原理中讲到的那些东西。
+所有的Source配置项都以全局属性的形式存在，使用`context.getString()`到配置文件中取，或者直接使用默认值。
+等等… 这些细节我们边写边说吧
+
+
+
+> 自定义Source代码实现
+
+1. `extends AbstractSource implements Configurable, PollableSource`继承实现这些类
+
+2. 官方模板中的`start()`和`stop()`用于和外部数据源客户端建立/断开连接（例如MySQL）这两个方法是可选实现，这里我们做的是简单的实现就不使用这俩方法了。
+
+3. 接口中必须实现的四个方法:
+
+   - `void configure(Context context)`
+   - `Status process()`
+   - `long getBackOffSleepIncrement()`
+   - `long getMaxBackOffSleepInterval()`
+
+   关键在于前两个方法，后俩和BackOff的时间设置有关。
+
+4. `process()`方法的任务
+
+   - 将数据封装为Event对象
+   - 将封装好的Event交给ChannelProcessor处理（查看源码！！）
+   - 控制Event的处理，为其设置状态(State: READY or BACKOFF)
+
+5. `configure(Context context)`方法
+
+   - 读取配置文件中的配置并为Source中的属性设值
+
+----
+
+包装Event时，需要用到Event接口的一个实现类：`SimpleEvent` 另外一个实现类（JSONEvent）;
+
+使用`getChannelProcessor().processEvent(event);`完成Event的处理，包括拦截器，事务，Channel选择
+来看看源码：
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200805142155.png" alt="image-20200805142155016" style="zoom: 67%;" />
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200805142419.png" alt="image-20200805142406917" style="zoom: 80%;" />
+
+之前事务中讲到的doPut、doCommit、doRollBack现在都见到活物了！！！拦截器链和Selector的工作顺序也得以验证。
+
+
+
+完整代码：
+
+```java
+public class MySource extends AbstractSource implements Configurable, PollableSource {
+
+    /**
+     * 数据前缀
+     */
+    private String prefix;
+
+    /**
+     * 数据后缀
+     */
+    private String suffix;
+
+    @Override
+    public void configure(Context context) {
+        // 读取配置文件或使用默认值(data)
+        prefix = context.getString("prefix", "data");
+        suffix = context.getString("suffix", "data");
+    }
+
+    /**
+     * 1. 接收数据包装为Event
+     * 2. 将Event传给Channel
+     *
+     * @return
+     * @throws EventDeliveryException
+     */
+    @Override
+    public Status process() throws EventDeliveryException {
+        Status status = null;
+
+        try {
+            // 模拟接收数据
+            for (int i = 0; i < 5; i++) {
+                SimpleEvent event = new SimpleEvent();
+                // 为 Event设置数据本体
+                event.setBody((prefix + "--" + i + "--" + suffix).getBytes());
+    
+                getChannelProcessor().processEvent(event);
+            }
+            status = Status.READY;
+        } catch (Exception e) {
+            e.printStackTrace();
+            // 发送失败 status置为 BACKOFF
+            status = Status.BACKOFF;
+        }
+        
+        // 延迟两秒
+        try {
+            TimeUnit.SECONDS.sleep(10);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return status;
+    }
+
+    @Override
+    public long getBackOffSleepIncrement() {
+        return 0;
+    }
+
+    @Override
+    public long getMaxBackOffSleepInterval() {
+        return 0;
+    }
+}
+```
+
+这个Source有两个配置项：
+
+- prefix
+- suffix
+
+默认值都是data。
+数据由Source自己伪造就是那个for循环:laughing:
+
+> 配置文件和启动
+
+1. 打包放入flume的lib目录下
+
+2. 配置文件(默认配置):
+
+   ```properties
+   # Name the components on this agent
+   a1.sources = r1
+   a1.sinks = k1
+   a1.channels = c1
+   
+   # Describe/configure the source
+   a1.sources.r1.type = com.sakura.source.MySource
+   
+   # Describe the sink
+   a1.sinks.k1.type = logger
+   
+   # Use a channel which buffers events in memory
+   a1.channels.c1.type = memory
+   a1.channels.c1.capacity = 1000
+   a1.channels.c1.transactionCapacity = 100
+   
+   # Bind the source and sink to the channel
+   a1.sources.r1.channels = c1
+   a1.sinks.k1.channel = c1
+   ```
+
+3. 测试运行
+
+   ![image-20200805145459348](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200805145459.png)
+
+   默认配置通过，每10秒一批数据。
+
+4. 添加配置
+
+   ```properties
+   a1.sources.r1.prefix = wuhu
+   a1.sources.r1.suffix = qifei
+   ```
+
+5. 再次启动
+
+   ![image-20200805145734618](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200805145734.png)
+
+
+
+> 总结：
+
+以上的Source自定义数据，是我们通过程序伪造的，在应对不同的需求的时候，只要使用对应的办法将数据读到程序中就可以实现啦！只要在==程序中拿到数据就一切都好说==！！（比如MySQL, 和MySQL建立连接后查询就能拿到数据。。）
+
+----
+
+
+
+## 3.7、自定义Sink
+
+Source都能自定义了，那Sink没有理由不行！！
+
+同样官方也给出到了自定义Sink的模板：
+
+```java
+public class MySink extends AbstractSink implements Configurable {
+  private String myProp;
+
+  @Override
+  public void configure(Context context) {
+    String myProp = context.getString("myProp", "defaultValue");
+
+    // Process the myProp value (e.g. validation)
+
+    // Store myProp for later retrieval by process() method
+    this.myProp = myProp;
+  }
+
+  @Override
+  public void start() {
+    // Initialize the connection to the external repository (e.g. HDFS) that
+    // this Sink will forward Events to ..
+  }
+
+  @Override
+  public void stop () {
+    // Disconnect from the external respository and do any
+    // additional cleanup (e.g. releasing resources or nulling-out
+    // field values) ..
+  }
+
+  @Override
+  public Status process() throws EventDeliveryException {
+    Status status = null;
+
+    // Start transaction
+    Channel ch = getChannel();
+    Transaction txn = ch.getTransaction();
+    txn.begin();
+    try {
+      // This try clause includes whatever Channel operations you want to do
+
+      Event event = ch.take();
+
+      // Send the Event to the external repository.
+      // storeSomeData(e);
+
+      txn.commit();
+      status = Status.READY;
+    } catch (Throwable t) {
+      txn.rollback();
+
+      // Log exception, handle individual exceptions as needed
+
+      status = Status.BACKOFF;
+
+      // re-throw all Errors
+      if (t instanceof Error) {
+        throw (Error)t;
+      }
+    }
+    return status;
+  }
+}
+```
+
+最大也是唯一的区别在`process()`方法中，==在自定义Source的时候，所有事务相关的操作不用我们来做，框架已经帮我们完成。而自定义Sink时，所有的事务操作需要我们亲力亲为。==我们可以借鉴官方Source的事务代码。
+
+注意官方给出的模板中并没有使用`close()`关闭事务！！一定一定要使用close()关闭事务！！
+
+具体步骤就不说了和Source的大差不差。
+完整代码：
+
+```java
+public class MySink extends AbstractSink implements Configurable {
+
+    private String suffix;
+    // 获取一个Logger对象 用于输出到控制台
+    private Logger logger = Logger.getLogger(MySink.class);
+
+    @Override
+    public void configure(Context context) {
+        suffix = context.getString("suffix", "--data");
+    }
+
+    @Override
+    public Status process() throws EventDeliveryException {
+
+        Status status = null;
+
+        Channel ch = getChannel();
+        Transaction txn = ch.getTransaction();
+        txn.begin();
+        try {
+            
+            Event event = ch.take();
+            logger.info(new String(event.getBody()) + suffix);
+
+            txn.commit();
+            status = Status.READY;
+        } catch (Throwable t) {
+            txn.rollback();
+            status = Status.BACKOFF;
+        } finally {
+            // 关闭事务
+            if (txn != null) {
+                txn.close();
+            }
+        }
+        return status;
+    }
+}
+```
+
+
+
+> 配置文件及启动
+
+```properties
+# Name the components on this agent
+a1.sources = r1
+a1.sinks = k1
+a1.channels = c1
+
+# Describe/configure the source
+a1.sources.r1.type = netcat
+a1.sources.r1.bind = hadoop102
+a1.sources.r1.port = 44444
+
+# Describe the sink
+a1.sinks.k1.type = com.sakura.sink.MySink
+
+# Use a channel which buffers events in memory
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 1000
+a1.channels.c1.transactionCapacity = 100
+
+# Bind the source and sink to the channel
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+```
+
+
+
+启动测试
+
+![image-20200805170055104](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200805170055.png)
+
+增加配置，再测试
+
+```properties
+a1.sinks.k1.suffix = --from sakura
+```
+
+![image-20200805170336707](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200805170336.png)
+
+
+
+> 总结
+
+和Source一样，我们的数据输出位置使用的是最简易的控制台输出，在面对不同的场景下，你可以将这些数据以特定的方式输出到你想要的位置。我们的目的只是了解整个自定义的过程，具体的业务实现要根据场景来具体实现。（比如MySQL，就有很多很多种方式来利用这些数据插入到表中。）
+
+
+
+# 四、常见面试题
+
+1. Source、Sink、Channel的作用
+2. 常用的Source Sink Channel
+3. 关于ChannelSelector，两种Selector以及Interceptor
+4. Flume调优（MemoryChannel参数调整等）
+5. Flume事务机制，Flume采集的数据会丢失吗？(有事务机制可以保证数据不会丢失，但是有可能会出现数据重复的情况)
 
