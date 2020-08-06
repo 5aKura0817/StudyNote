@@ -29,7 +29,7 @@
   >
   > - React（Facebook出品）
   >
-  >   > 提出了虚拟Dom的概念
+  >   > 提出了虚拟Dom（Visual Dom）的概念
   >   >
   >   > 需要学JSX语言
   >

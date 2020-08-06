@@ -282,6 +282,35 @@ numChildren = 1
 
 
 
+> 群起脚本
+
+```shell
+#!/bin/bash
+case $1 in
+"start"){
+    for i in hadoop102 hadoop103 hadoop104
+    do
+        echo "******zk-$i-start********"
+        ssh $i "/opt/module/apache-zookeeper-3.6.1-bin/bin/zkServer.sh start"
+    done
+};;
+
+"stop"){
+    for i in hadoop102 hadoop103 hadoop104
+    do
+        echo "******zk-$i-stop********"
+        ssh $i "/opt/module/apache-zookeeper-3.6.1-bin/bin/zkServer.sh stop"
+    done
+};;
+esac
+```
+
+使用群起脚本的时候，可能会遇到Error: JAVA_HOME is not set and java could not be found in PATH.报错，修改zookeeper的bin/zkEnv.sh中jdk相关的：
+
+![image-20200806141435977](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200806141436.png)
+
+
+
 ## 4.2、Shell命令操作
 
 所有的shell命令都是在操作zookeeper的目录树，要通过客户端完成。
