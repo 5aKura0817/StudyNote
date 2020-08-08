@@ -621,11 +621,11 @@ kafka默认是使用策略二！！当所有的 ISR 副本都挂掉时，会选�
 
 ack的策略有三种，对应三个可选配置值：
 
-- `ack = 0`: Productor发送消息后，就不管了，也不管你到底有没有收到，有没有同步，我发我的。
+- `acks = 0`: Productor发送消息后，就不管了，也不管你到底有没有收到，有没有同步，我发我的。
   **这种做法很容易导致数据丢失！！**当Leader故障下线，选取Leader期间Productor并不知情，它仍然高高兴兴发着消息，这期间所有的消息也就丢失了。
-- `ack = 1`: Productor只要接到了Leader的应答，就继续发消息。
+- `acks = 1`: Productor只要接到了Leader的应答，就继续发消息。
   当Leader正在追加生产者发来的消息的时候发生故障，Follower还没来得及拉取Leader中数据就发生了数据丢失。
-- `ack = all(-1)`: Productor要接收到Leader和所有Follower(ISR集合中的Follower)的响应才继续发送消息
+- `acks = all(-1)`: Productor要接收到Leader和所有Follower(ISR集合中的Follower)的响应才继续发送消息
   这样的做法看起来万无一失，可是也存在问题：
   - 当副本数量只有1个(只有Leader)的时候，这个配置毫无意义，同样会产生数据丢失。只有配合副本数量>=2d的情况使用才有效果。
   - ==可能存在消息重复的问题！==当所有的ISR中Follower同步完成，Leader还没来得及响应就掉线了，此时重新选举Leader后，又会重新发一遍数据，就造成了数据重复..
@@ -677,7 +677,7 @@ ack的策略有三种，对应三个可选配置值：
 - *At least once*——消息可以重传但绝不丢失。
 - *Exactly once*——这正是人们想要的, 每一条消息只被传递一次.
 
-At most once，很好理解，就是不管收没收到我就传一次。类似于`ack=0`
+At most once，很好理解，就是不管收没收到我就传一次。类似于`acks=0`
 At least once，至少传一次，如果没有得到响应则重传，直到得到响应为止。可能产生数据重复。
 Exactly once，刚刚好一次，这是最理想的状态，消息只传一次并且不会传丢。
 
@@ -711,6 +711,333 @@ Kafka在0.11版本开始，也开启了幂等性的传递选项：
 ---
 
 官方文档还提到，0.11版本加入了类似事务的语义将Productor消息写入topic。自行阅读官方文档学习。
+
+
+
+## 3.3、消费者
+
+### 3.3.1、两种消费方式
+
+- ==broker向consumer推送(push)其订阅的topic的消息。==
+
+  但是**推送速度由broker决定**，它的目标是尽可能快地推送数据给consumer，但是他根本不了解每个consumer的处理消息的速度，就很**容易造成消费者端的消息积压，从而导致拒绝服务或者网络拥塞**。
+
+- ==consumer主动去其订阅的topic中拉取(pull)消息==
+
+  这样的的做法，每个consumer可以根据自己的消费能力，以适合自己的工作节奏去拉取数据。
+  但是也存在【问题】：**consumer需要反复判断topic中是否有消息，倘若队列中长时间没有消息，那么consumer就会陷入无限的循环中，并且每次拉取返回的都是空数据，浪费资源。**
+  为了解决这个问题，**kafka要求消费者在消费数据的时候，传入一个时长参数timeout，当拉取到空数据后，在timeout时长期间都不会再去拉取数据，时间结束再去尝试拉取。**
+
+----
+
+
+
+### 3.3.2、分区分配策略
+
+**只有当有消费者组存在的时候，才涉及到分区分配的问题！！**
+
+每个Consumer Group由若干个Consumer组成，而每个Topic中分为若干的partition。但是==规定每个消费者组中，不允许存在两个消费者同时消费同一个topic的同一个分区！！(即同一个分区只能同时由消费者组中一个消费者消费)==所以才出现了分区分配的问题！！
+
+提供了两种分区分配的策略：
+
+- 轮询分配(roundrobin)
+- 划块分配(Range)
+
+我们用两张图先简单认识一下：
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200808134312.png" alt="image-20200808134312833" style="zoom:67%;" />
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200808134422.png" alt="image-20200808134422678" style="zoom:67%;" />
+
+只还只是针对于一个Topic，当消费者组中，每个消费者订阅的**Topic有多个时**，两者的区别就出来了。
+
+> 轮询分配的策略(RoundRobin)
+
+当有多个topic时，由于每个partition被封装为一个` TopicAndPartition`对象，先将所有Topic的Partition混合，按照Partition的对象Hash值，做排序，然后轮询分配分区。但是存在【限制】！==要想混合Topic中的Partition，这些Topic必须同时被消费者组中的所有消费者同时订阅，否则消费者将会收到他没有订阅的Topic的消息。。==
+
+
+
+> 划段分配策略(Range)
+
+每次划段是单独对一个topic进行划段分配，按照订阅这个topic的消费者数量，均匀划段然后分配。==划段不均匀，在topic数量增加的时候就会暴露出分区分配不均匀的缺点！！（最后一个每次都只能喝汤分一个，久而久之就失去平衡了）==
+
+-----
+
+> 【问题】：何时会触发分区分配策略的执行？
+
+==当消费者组中消费者数量发生变化的时候，就会触发分区分配策略进行重新分配。==就算加进来没有分区可以给它，只要数量变了就要重新分配！！
+
+
+
+==默认使用划段分配（Range）!!!==
+
+![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200808140708.png)
+
+----
+
+
+
+### 3.3.3、Offset的维护
+
+在初次接触Kafka的结构的时候，我们就知道了Offset这个东西，是==用于确定Consumer在Partition中消费数据的位置的，也是为了方便消费者故障重连后能继续恢复消费数据。==
+
+现在现在我们引入了消费者组的概念，那么你觉得Offset由什么决定和保存呢？每个Consumer自己保存吗？还是Partition？还是Consumer组？亦或是Topic？
+
+首先如果是Consumer自己保存，那么一旦他被分配到其他分区，当他再次回去消费原来的分区的时候，有可能出现==消息重复消费==的情况!! 你总不能在坑上面贴个纸条说“就这就我的坑，谁都不能碰！”Consumer自己保存:x:
+
+Partition？一样的道理，Consumer的来回切换很容易造成消息重复消费！！。:x:
+
+> 正确答案：==Offset由消费者组、Topic、Partition三方共同决定！！==
+
+口说无论，上才艺！！首先我们按照老版本方式，将Offset存到Zookeeper上来查看。也趁此机会来看看Kafka到底在ZK上存了些什么。
+
+1. 启动生产者，消费者，并将Offset存放到ZK上：
+
+   `kafka-console-producer.sh --broker-list hadoop102:9092 --topic testA`
+
+   `kafka-console-consumer.sh --zookeeper hadoop102:2181 --topic testA`
+
+2. 启动zkClient，查看目录结构：
+
+   ```shell
+   ls /
+   [admin, brokers, cluster, config, consumers, controller, controller_epoch, isr_change_notification, latest_producer_id_block, zookeeper]
+   
+   ```
+
+   我们这次只看`/brokers` 和 `/consumers`两个节点
+
+3. /brokers 存放着Kafka集群的节点信息：
+
+   ```shell
+   # 节点信息
+   ls  /brokers
+   [ids, seqid, topics]
+   
+   ls  /brokers/ids
+   [0, 1, 2]
+   
+   get  /brokers/ids/0
+   {"listener_security_protocol_map":{"PLAINTEXT":"PLAINTEXT"},"endpoints":["PLAINTEXT://hadoop102:9092"],"jmx_port":-1,"host":"hadoop102","timestamp":"1596868875187","port":9092,"version":4}
+   
+   get /brokers/ids/1
+   {"listener_security_protocol_map":{"PLAINTEXT":"PLAINTEXT"},"endpoints":["PLAINTEXT://hadoop103:9092"],"jmx_port":-1,"host":"hadoop103","timestamp":"1596868876629","port":9092,"version":4}
+   
+   # topics 和 partition
+   ls /brokers/topics
+   [__consumer_offsets, testA]
+   
+   get /brokers/topics/testA
+   {"version":1,"partitions":{"1":[2,0],"0":[1,2]}}
+   
+   ls /brokers/topics/testA/partitions
+   [0, 1]
+   
+   get /brokers/topics/testA/partitions/0/state
+   {"controller_epoch":4,"leader":1,"version":1,"leader_epoch":3,"isr":[1,2]}
+   ```
+
+    
+
+4. 重头戏开始，看看/consumers
+
+   ```shell
+   # 所有的Consumer Group 我说了你也不会信
+   # 两个消费者组对应 我们开启的两个消费者（独立成组）
+   ls /consumers
+   [console-consumer-38940, console-consumer-45452]
+   
+   # 每个消费者组管理的东西
+   ls /consumers/console-consumer-38940
+   [ids, offsets, owners]
+   
+   # 消费者组的信息
+   ls /consumers/console-consumer-38940/ids
+   [console-consumer-38940_hadoop103-1596870156366-40daf766]
+   
+   get /consumers/console-consumer-38940/ids/console-consumer-38940_hadoop103-1596870156366-40daf766
+   {"version":1,"subscription":{"testA":1},"pattern":"white_list","timestamp":"1596870156399"}
+   ```
+
+   下面我们直接看我们关心的Offset!!
+
+   ```shell
+   ls /consumers/console-consumer-38940/offsets
+   [testA]
+   
+   ls /consumers/console-consumer-38940/offsets/testA
+   [0, 1]
+   
+   get /consumers/console-consumer-38940/offsets/testA/0
+   2
+   
+   get /consumers/console-consumer-38940/offsets/testA/1
+   3
+   ```
+
+   ==认了吧！我们先找到了消费者组，然后找到topic标题，然后选择了分区号，取到的数值不同。就可以说明要通过`ConsumerGroup`,`topic`,`partition`才能确定Offset！！==
+
+    
+
+   我们现在模拟生产消费几条数据，看看数值会不会变化。
+
+   ```shell
+   get /consumers/console-consumer-38940/offsets/testA/0
+   4   
+   
+   get /consumers/console-consumer-38940/offsets/testA/1
+   5
+   ```
+
+   共生产消费了4条数据，消息按照轮询的规则放入分区，消费者组中消费者同时消费两个分区，offset也是轮询增长。没毛病哦！！
+
+    
+
+5. 退出消费者，重启看Offset是否被保存
+   由于上线后，节点下没有offset,所以又生产消费了一条数据，offset节点出现，并且保留之前的Offset。
+   **奇怪的是，消费者组明显变化了，但是Offset保留了，这是为什么呢？？**我们对消费者组的认知出现了偏差？！
+
+   ```shell
+   get /consumers/console-consumer-63155/offsets/testA/0
+   5
+   get /consumers/console-consumer-63155/offsets/testA/1
+   5
+   ```
+
+
+
+以上是在Zookeeper上看到的，现在我们连接bootstrap-server将Offset存在本地，实质上是存在一个名为:`__consumer_offsets`的topic中。
+
+> 那么实际上对于这个Topic，我们启动的消费者 在另一个角度上变为了这个topic的生产者，我们每次消费数据 导致的Offset变化就成为消息发送到这个Topic中。所以我们要再启动一个消费者，来消费这个Topic中的数据。
+> ![image-20200808154609855](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200808154609.png)
+
+ 
+
+1. 首先要关闭对这个topic的消费控制
+
+   `consumer.properties`中增加：
+
+   ```properties
+   exclude.internal.topics=false
+   ```
+
+2. 正常启动生产者和消费者，连接bootstrap服务器！！
+
+3. 再次启动一个消费者，消费__consumer_offsets中的数据，需要格式化，，为了不产生影响，连接到zookeeper
+
+   `bin/kafka-console-consumer.sh --topic __consumer_offsets --zookeeper hadoop102:2181 --formatter "kafka.coordinator.group.GroupMetadataManager\$OffsetsMessageFormatter" --consumer.config config/consumer.properties --from-beginning`
+
+4. 康康控制台的输出：
+
+   ![image-20200808160532892](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200808160532.png)
+
+   按看是**五秒一组**，每组两条分别对应两个分区，这个topic一共50个分区，至于这个数据 是从那个分区中取出来的我也不知道，但是数据的KV形式，肯定和Key的hash值有关。我们也不需要知道这些数据是放在那个分区的。
+
+   我们重点只看：==KEY是由 [消费者组名,topic名,分区号]三部分组成的，对应的Value中就包含着Offset!!近一步验证了我们的说法！==
+
+----
+
+
+
+### 3.3.4、消费者组
+
+默认情况下不指定配置文件，消费者组的ID是随机分配的，所以就很难做到多个消费者分到一个组里面。其实==消费者启动是应该制定配置文件的，配置文件中写好消费者组ID，就能保证消费者启动时加入对应的组中。==
+
+1. 修改consumer.properties
+
+   ![image-20200808200818133](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200808200818.png)
+
+   默认是test-consumer-group，我们现在修改一个自定义的组名（sakura-group）。
+
+2. 现在启动消费者，就要指定配置文件了
+
+   `bin/kafka-console-consumer.sh --topic testA --zookeeper hadoop102:2181 --consumer.config config/consumer.properties`
+
+   使用`--consumer。config`选项来指定配置文件。
+
+3. 到zookeeper里面去瞅瞅：
+
+   ![image-20200808202405957](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200808202406.png)
+
+   这也印证了我之前说这里的东西就是消费者组的ID！
+
+4. 测试分区分配
+   现在我们使用topic:testA 有两个分区，如果我们再启动一个消费者加入到这个组并订阅testA,那么两个人应该是一人一个分区，交替接收到消息。
+   ![image-20200808202734466](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200808202734.png)
+
+   ![image-20200808203636933](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200808203637.png)
+
+   
+
+   现在我们再加一个消费者进来，即使他可能没有分区分配，但是也会进行一次重新分配
+
+   ![image-20200808204157246](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200808204157.png)
+
+   当加入新的消费者后，所有的消费者都收到了一条分区分配Range策略执行警告，告知有一个小可怜消费者订阅了testA这个主题，但是没有可用的partition让她消费，并且给出了消费者的id: sakura-group_hadoop102-15968xxxxxx。
+
+   所以理所当然也就没有拉取到消息。。。
+
+----
+
+以上就是消费者组的配置，就算是跨机器，只要连接的是同一个zookeeper集群，并且配置文件中配置的是消费者组的id没有问题，也是可以加入对应组的！！！
+
+
+
+## 3.4、高效读写数据
+
+都说Kafka很快，但是为什么Kafka这么快呢？
+
+推荐阅读：[Kafka为什么这么快](https://www.cnblogs.com/tesla-turing/p/11490263.html)
+
+关键在于Kafka使用的两个高效操作：
+
+- ==顺序写磁盘==
+- ==页缓存和零拷贝==
+
+> 顺序写磁盘
+
+首先在操作系统的课程学习中，我们知道磁盘的结构包括，磁头和磁盘，磁头通过扫描具体磁道和扇区，定位存储单元然后完成信息数据的写入和读出。那么这过程中==磁盘的旋转和磁头的来回移动扫描寻址都是十分耗时的操作==。唯一能减少这部分操作的，就是选出一大片连续的存储单元进行读写，这样大大减少了那些耗时操作。==官方有数据表明，顺序写的速度能达到600M/s 而随机写只有100K/s==
+
+
+
+> 页缓存(PageCache)和零拷贝
+
+传统的应用程序实现文件拷贝，都需要经多次拷贝，操作系统内核将文件内容拷贝到页缓存中，再从页缓存使用IO读取到应用程序里面，再通过应用程序IO写到缓存，然后操作系统从缓存中拿数据写入到磁盘上。这期间多次拷贝和IO，耗时是相当严重了。
+
+而==Kafka是将数据内容写入到页缓存中，而没有直接到磁盘中，消费者如果消费消息，直接在页缓存中进行数据拉取，就减少了一次从磁盘到页缓存的一次IO。==
+
+
+
+> 分区和分布式
+
+分区和分布式，都大大==提高了开发时候的并行度==，充分发挥了人多力量大的优势。
+
+
+
+> 其他
+
+包括之前提到的，**日志文件分片和索引**，**日志文件的压缩编码**等等。。
+
+
+
+## 3.5、Zookeeper在Kafka集群中的作用
+
+Zookeeper其主要功能，还是离不开他的本质工作：==数据存储和消息提醒==，主要也是存储了Kafka集群，Topic的一些重要消息，以及帮助集群高效有序地运行。说到集群的管理就不得不提到Kafka集群的Controller，虽然说broker之间人人平等，但是俗话说“**国一日不可无君，家一日不可无主**”集群中，总要有一个能管事的，我们将其称为Controller。
+
+官方对于Controller的描述：
+
+> 我们会选择一个 broker 作为 “controller”节点。controller 节点==负责 检测 brokers 级别故障,并负责在 broker 故障的情况下更改这个故障 Broker 中的 partition 的 leadership 。==这种方式可以批量的通知主从关系的变化，使得对于拥有大量partition 的broker ,选举过程的代价更低并且速度更快。==如果 controller 节点挂了，其他 存活的 broker 都可能成为新的 controller 节点。==
+>
+> 说白了就是当出现故障，或者某些选举任务时，都由Controller来主持，确保过程有序进行。
+
+**怎么选这个Controller呢？**
+很粗暴！就是==抢==，谁抢到就是谁的。集群启动谁第一个起来，谁就是Controller。当Controller了挂了，剩下的Broker继续抢，谁抢到就是谁。
+
+
+
+**怎么看谁是Controller？**这么重要的消息当然要到Zookeeper里面去找到的呀！
+
+![image-20200808213148687](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200808213148.png)
 
 
 
