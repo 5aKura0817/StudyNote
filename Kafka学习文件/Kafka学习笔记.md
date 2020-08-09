@@ -91,11 +91,11 @@ Kafka是一个**分布式**的==基于**发布/订阅模式**的消息队列==�
 
 首先我们可以把整张图划分三个区域：
 
-- Productor（消息生产者）：负责产出消息
+- Producer（消息生产者）：负责产出消息
 - Kafka Cluster（集群）：每个Kafka集群中由若干个Broker（Kafka服务器）组成
 - Consumer Group（消费者组）：每个消费者组由若干个Consumer（消费者）组成。
 
-简化就是`Productor`、`Kafka Broker`、`Consumer`
+简化就是`Producer`、`Kafka Broker`、`Consumer`
 
 > Broker
 
@@ -368,7 +368,7 @@ logs目录是Kafka默认存放日志的位置。所以我们要将消息数据�
 
 
 
-> Consumer & Productor
+> Consumer & Producer
 
 1. 确保当前已有一个topic，若没有则创建。
 
@@ -512,7 +512,7 @@ index文件和log文件 就是以其Segment File的第一条消息的offset命�
 
 > 生产者消息分区存放的策略
 
-首先我们要记住一个点！：生产者生产的消息在Kafka消息队列中存放是要封装为`ProductorRecord`对象的！！
+首先我们要记住一个点！：生产者生产的消息在Kafka消息队列中存放是要封装为`ProducerRecord`对象的！！
 [Kafka JavaAPI手册——KafkaProducer](https://kafka.apachecn.org/10/javadoc/index.html?org/apache/kafka/clients/producer/KafkaProducer.html)
 在API手册中就能找到这个类：
 ![image-20200807103206014](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200807103206.png)
@@ -547,7 +547,7 @@ Kafka官方认为这个副本功能并不常用，并且还可能对吞吐性能
 
 > 一致性如何保证？
 
-生产者在往Partition中追加消息的时候，并不是一股脑往里面发，也要确保消息确实被topic接收并且同步。这个机制叫做**ACK应答机制**由Productor配置，目前我们只需要知道Productor需要一个回应后才会继续写消息。
+生产者在往Partition中追加消息的时候，并不是一股脑往里面发，也要确保消息确实被topic接收并且同步。这个机制叫做**ACK应答机制**由Producer配置，目前我们只需要知道Producer需要一个回应后才会继续写消息。
 
 Follow和普通的Consumer一样，从Leader中拉取消息进行保存写入log文件。
 
@@ -621,11 +621,11 @@ kafka默认是使用策略二！！当所有的 ISR 副本都挂掉时，会选�
 
 ack的策略有三种，对应三个可选配置值：
 
-- `acks = 0`: Productor发送消息后，就不管了，也不管你到底有没有收到，有没有同步，我发我的。
-  **这种做法很容易导致数据丢失！！**当Leader故障下线，选取Leader期间Productor并不知情，它仍然高高兴兴发着消息，这期间所有的消息也就丢失了。
-- `acks = 1`: Productor只要接到了Leader的应答，就继续发消息。
+- `acks = 0`: Producer发送消息后，就不管了，也不管你到底有没有收到，有没有同步，我发我的。
+  **这种做法很容易导致数据丢失！！**当Leader故障下线，选取Leader期间Producer并不知情，它仍然高高兴兴发着消息，这期间所有的消息也就丢失了。
+- `acks = 1`: Producer只要接到了Leader的应答，就继续发消息。
   当Leader正在追加生产者发来的消息的时候发生故障，Follower还没来得及拉取Leader中数据就发生了数据丢失。
-- `acks = all(-1)`: Productor要接收到Leader和所有Follower(ISR集合中的Follower)的响应才继续发送消息
+- `acks = all(-1)`: Producer要接收到Leader和所有Follower(ISR集合中的Follower)的响应才继续发送消息
   这样的做法看起来万无一失，可是也存在问题：
   - 当副本数量只有1个(只有Leader)的时候，这个配置毫无意义，同样会产生数据丢失。只有配合副本数量>=2d的情况使用才有效果。
   - ==可能存在消息重复的问题！==当所有的ISR中Follower同步完成，Leader还没来得及响应就掉线了，此时重新选举Leader后，又会重新发一遍数据，就造成了数据重复..
@@ -698,19 +698,19 @@ Kafka在0.11版本开始，也开启了幂等性的传递选项：
 
 > 消息传递幂等性如何实现的？
 
-消息是Productor发出去，它自己可能也不知情，那么我们能操作的地方就只有broker和consumer了。按官方文档的说明，其实是对Productor做了一定的改造，并且对消息的封装也做了优化。
-首先Broker会给每个Productor一个ID(又称PID)，并且Productor发送的每一条消息，都要有一个序列号（这个序列号就是区分存放信息的关键），这些消息过来就有了三个部分：==<Productor ID, 分区号, 消息序列号>==,**一旦三者同时重复，就可以认为是重复的消息，Leader持久化以后就会覆盖原先的提交。**
+消息是Producer发出去，它自己可能也不知情，那么我们能操作的地方就只有broker和consumer了。按官方文档的说明，其实是对Producer做了一定的改造，并且对消息的封装也做了优化。
+首先Broker会给每个Producer一个ID(又称PID)，并且Producer发送的每一条消息，都要有一个序列号（这个序列号就是区分存放信息的关键），这些消息过来就有了三个部分：==<Producer ID, 分区号, 消息序列号>==,**一旦三者同时重复，就可以认为是重复的消息，Leader持久化以后就会覆盖原先的提交。**
 
 那么就有局限性了：
 
-- Productor故障重启后，重新分配的Productor ID不同了，即使是消息重复也检查不到了
+- Producer故障重启后，重新分配的Producer ID不同了，即使是消息重复也检查不到了
 - 分区之间的（partition_1 和 partition_2）中重复消息无法检测
 
 所以，==幂等性仅能保证单个生产者会话中单个分区的消息不重复==
 
 ---
 
-官方文档还提到，0.11版本加入了类似事务的语义将Productor消息写入topic。自行阅读官方文档学习。
+官方文档还提到，0.11版本加入了类似事务的语义将Producer消息写入topic。自行阅读官方文档学习。
 
 
 
@@ -1041,3 +1041,241 @@ Zookeeper其主要功能，还是离不开他的本质工作：==数据存储和
 
 
 
+## 3.6、事务
+
+![image-20200809152411563](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200809152411.png)
+
+![image-20200809152527387](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200809152527.png)
+
+ 
+
+> 生产者事务
+
+使用幂等性，只能保证单次会话中的数据不重复，而当生产者故障中断，重启后重新分配PID，此时重新发送消息幂等性也无法保证消息无重复。
+
+**场景：**在生产者批量向三个分区发送数据的时候，前面两个分区都已经发送成功，在向第三个分区发送消息的时候发生了故障。此时就算是重启了由于PID不同幂等性不起作用，重新发送消息，前两个分区中就会发生==消息重复==。
+
+事务性质的利用，就可以解决这一问题，首先为了管理事务，Kafka引入了一个新的组件Transaction Coordinator，每次Producer向topic写入数据都会开启一个事务，并且分配一个全局唯一的TransactionID与ProducerID(PID)进行绑定。==消息发送要么全部成功要么全部失败==
+
+若由于服务崩溃导致事务中断，Transaction Coordinator可以通过TransactionID来查出事务的状态，事务也可以继续进行。
+
+
+
+> 消费者事务
+
+对于消费者来说，事务性的存在可能没有那么重要。
+常见于，当消费者使用Offset消费任意一处数据的时候，可能刚好log文件段（SegmentFile）结束生命周期，文件被清理，消息丢失。此时就会触发事务，本次消费全部失败。
+
+
+
+
+
+# 四、Kafka API
+
+## 4.1、Producer API
+
+先简单了解一些，Producer发送消息的过程。不仅仅是一个发送和就收反馈的过程。看看官方API文档:
+
+![image-20200809163905264](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200809163905.png)
+
+ 
+
+第一段告诉我们一个Producer包含
+
+- ==一个用于存放未传输的消息记录的缓冲池（RecordAccumulator）==
+- ==一个发送请求和发送数据到集群的后台进程（Send线程）==
+
+第二段给出以下信息：
+
+- send()方法是一个==异步==方法，当调用的时候，会将消息记录（record）加入待发送的记录缓冲池，然后立马返回，提高了生产者发送消息的效率。
+
+我们再来看官方的第一个实例程序：
+![image-20200809164812686](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200809164812.png)
+
+应该很明了了，消息被封装为ProducerRecord对象，然后Producer对象在Main线程调用send()方法，发送到到缓冲池中，由Send这个后台线程完成消息发送到Topic。主线程的send()方法立即返回后，开始下一次的调用。
+
+这并不是我们想象的生产者发送一个消息，等到Broker响应给我们ack，然后再干下一单。==发送消息应该是完完全全异步，不断地发，使用一个线程来接收响应的ack，出现问题再重发。==
+
+==并且主线程调用send()后，还可能经过拦截器、序列化器、分区器；==下面用一张图来展示一下：
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200809170759.png" alt="image-20200809170759507" style="zoom: 67%;" />
+
+
+
+### 4.1.1、第一个简单的Producer
+
+1. 创建Maven项目,导入一下依赖：
+
+   ```xml
+   <dependency>
+       <groupId>org.apache.kafka</groupId>
+       <artifactId>kafka-clients</artifactId>
+       <version>0.11.0.0</version>
+   </dependency>
+   ```
+
+2. 自定义类，MyProducer
+
+   ```java
+   public class MyProducer {
+       public static void main(String[] args) {
+           // 创建配置类
+           Properties props = new Properties();
+           // 1. 设置连接集群
+           props.put("bootstrap.servers", "hadoop102:9092");
+           // 2. 设置ack应答策略
+           props.put("acks", "all");
+           // 3. 设置重试次数
+           props.put("retries", 0);
+           // 4. 设置批次大小
+           props.put("batch.size", 16384);
+           // 5. 设置消息发送等待时间
+           props.put("linger.ms", 1);
+           // 6. 设置缓冲区的大小
+           props.put("buffer.memory", 33554432);
+           // 7. 设置key/value的序列化器
+           props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+           props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+   
+           // 8. 通过配置文件创建一个Producer对象
+           KafkaProducer<String, String> producer = new KafkaProducer<>(props);
+   
+           for (int i = 0; i < 10; i++) {
+               // 9. 调用send()发送消息到缓冲区
+               producer.send(new ProducerRecord<String, String>("testA", "message-->" + i));
+           }
+   
+           // 10. 关闭释放资源
+           producer.close();
+       }
+   }
+   ```
+
+3. 启动一个集群的消费者
+
+4. 运行程序，观察消费者控制台输出
+
+   ```
+   message-->0
+   message-->2
+   message-->4
+   message-->6
+   message-->8
+   message-->1
+   message-->3
+   message-->5
+   message-->7
+   message-->9
+   ```
+
+小朋友你是否有很多问号？！下面我们对代码和输出来进行分析。
+
+> 1. 明明是0到9顺次发送的，为什么输出确是 0 2 4 6 8 1 3 …
+>
+>    答：因为我们封装的信息对象 ProducerRecord 没有指定key，所以按分区循环放置。并且是批次发送！！所以0 2 4 6 8进了分区1，并且消费者按批次消费数据，先分区1后分区2，于是就成了这样。
+>
+> 2. 配置设置中有两个点：`linger.ms` 和 `batch.size` 需要说一下
+>
+>    前面我们就说了，消息实际发送是由另一个线程掌管的，我们在主线程的程序是干预不到的。那么问题来了：
+>    【问题】:==Send线程怎么判断我们的消息之间的批次划分呢？==
+>    若所有数据都等到达到批次(batch)数据大小上限的话，那么达不到批次大小的数据就不会发送。
+>
+>    所以这两个参数就起到了关键作用！
+>
+>    - batch.size 批次数据的大小上限
+>    - linger.ms 发送批次数据的等待时间
+>
+>    **linger.ms的设置，是告诉生产者每次调用send()后，你还有这些毫秒数的时间用于继续向此批次中继续添加数据，一旦调用了send()后这段时间内，你没有往里面添加数据，Send线程就认为这个批次数据已经装填完毕，就发送了。**
+>
+>    batch.size的设置，就是当批次数据达到这个大小，Send线程就自动发过去了。
+
+我们来针对`linger.ms`这个参数的设置来做个试验！！
+
+- linger.ms=1，即每次Producer都有1ms时间继续装填数据，原程序应该就是10条数据同一个批次。
+
+  ![image-20200809194839137](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200809194839.png)
+
+  以上是10条数据一个批次过去，消费者的消费顺序。
+
+- linger.ms=1保存不变，我们设置每次send()后sleep 2ms：
+
+  ![image-20200809195343537](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200809195343.png)
+
+  乱套了，但是我们可以保证这绝对是一个批次过去的！！
+
+- 我现在 在此基础上将linger.ms调高设置为25ms
+
+  ![image-20200809195618656](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200809195618.png)
+
+  现在就又是一个批次过去了。
+
+-----
+
+- 当linger.ms=1的时候，我们只sleep 2ms 就不再是一个批次的数据了。现在我们来尝试更极端的，我们将linger.ms设置为2000ms 我们send()之间sleep 1s， 按逻辑来说一个还是10条数据一个批次过来！！=>
+
+  很遗憾失败了，不知道什么原因还是多批次发送，但是每个批次都有2~3条数据，当linger.ms设置为10000ms时，就可以得到我们想要的结果。
+  ![image-20200809201511147](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200809201511.png)
+
+- 现在反转，linger.ms=1000ms  每次send()间隔2s，就清晰可见，消息是一条一批，发送过来的，消费者一条一条消费：![image-20200809201651770](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200809201651.png)
+
+  这个自己测测，效果很直观！！
+
+==请注意！==当`linger.ms`使用==默认值0==的时候，间隔短（没有刻意sleep）的数据，也将划为一个批次处理。
+
+----
+
+
+
+### 4.1.2、带CallBack函数的生产者
+
+之前忘了说，在进行配置类进行put配置KV时，太多配置项不可能全部记下，`ProducerConfig`已经将所有配置项名设置为了常量，直接使用就可以了，就不怕把配置项写错了。
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200809212551.png" alt="image-20200809212550997" style="zoom:67%;" />
+
+ProducerWithCallback类：
+
+```java
+public class ProducerWithCallback {
+    public static void main(String[] args) {
+        Properties props = new Properties();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "hadoop102:9092");
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
+
+        KafkaProducer<String, String> producer = new KafkaProducer<>(props);
+
+        for (int i = 0; i <= 10; i++) {
+            producer.send(new ProducerRecord<>("testB", "message-->" + i),
+                    new Callback() {
+
+                        /**
+                         * @param recordMetadata
+                         * @param e
+                         * 回调函数，结束后执行
+                         */
+                        @Override
+                        public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+                            System.out.println("[" +
+                                    recordMetadata.timestamp() +
+                                    "," +
+                                    recordMetadata.partition() +
+                                    "," +
+                                    recordMetadata.offset() +
+                                    "]"
+                            );
+                        }
+                    });
+        }
+        producer.close();
+    }
+}
+```
+
+控制台输出：
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200809214903.png" alt="image-20200809214903886" style="zoom: 50%;" /><img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200809214958.png" alt="image-20200809214958842" style="zoom: 67%;" />
+
+消费的顺序，和控制台回调函数的执行顺序也对得上。
+
+==主要是调用send()方法的时候，第二参数使用一个匿名内部类实现Callback接口，实现其中仅有的onCompletion方法。==
+onCompletition方法会在消息发送完成后调用，可以用于异步处理消息异常。
+
+由于这个接口只有一个接口方法，所以可以使用lambda表达式简化。。。
