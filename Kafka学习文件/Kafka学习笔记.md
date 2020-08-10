@@ -489,7 +489,7 @@ index文件和log文件 就是以其Segment File的第一条消息的offset命�
 
 
 
-## 3.2、Kafka生产者
+## 3.2、生产者
 
 ### 3.2.1、数据分区存放策略
 
@@ -1279,3 +1279,751 @@ public class ProducerWithCallback {
 onCompletition方法会在消息发送完成后调用，可以用于异步处理消息异常。
 
 由于这个接口只有一个接口方法，所以可以使用lambda表达式简化。。。
+
+
+
+### 4.1.3、消息分区放置测试
+
+这个测试主要是在`ProducerRecord`的参数上做变动，之前在3.2.1看过JavaAPI文档中其所有的构造器。现在我们来看看本尊：
+![image-20200810090449245](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810090449.png)
+
+```java
+public ProducerRecord(String topic, Integer partition, Long timestamp, K key, V value, Iterable<Header> headers) {
+    if (topic == null) {
+        throw new IllegalArgumentException("Topic cannot be null.");
+    } else if (timestamp != null && timestamp < 0L) {
+        throw new IllegalArgumentException(String.format("Invalid timestamp: %d. Timestamp should always be non-negative or null.", timestamp));
+    } else if (partition != null && partition < 0) {
+        throw new IllegalArgumentException(String.format("Invalid partition: %d. Partition number should always be non-negative or null.", partition));
+    } else {
+        this.topic = topic;
+        this.partition = partition;
+        this.key = key;
+        this.value = value;
+        this.timestamp = timestamp;
+        this.headers = new RecordHeaders(headers);
+    }
+}
+
+public ProducerRecord(String topic, Integer partition, Long timestamp, K key, V value) {
+    this(topic, partition, timestamp, key, value, (Iterable)null);
+}
+
+public ProducerRecord(String topic, Integer partition, K key, V value, Iterable<Header> headers) {
+    this(topic, partition, (Long)null, key, value, headers);
+}
+
+public ProducerRecord(String topic, Integer partition, K key, V value) {
+    this(topic, partition, (Long)null, key, value, (Iterable)null);
+}
+
+public ProducerRecord(String topic, K key, V value) {
+    this(topic, (Integer)null, (Long)null, key, value, (Iterable)null);
+}
+
+public ProducerRecord(String topic, V value) {
+    this(topic, (Integer)null, (Long)null, (Object)null, value, (Iterable)null);
+}
+```
+
+其实你会发现，其实即使写了分区号，也会要求写上key，虽然这个Key在有分区号的情况下，不会对放置在哪个分区造成影响。但其实key是会被Topic存起来的，只是消费者消费输出时候只输出了value。
+
+
+
+ 现在我们把程序中ProducerRecord的构造器中加上分区号：
+
+```java
+for (int i = 0; i <= 10; i++) {
+    producer.send(new ProducerRecord<>("testB", 1,"sakura","message-->" + i));
+}
+producer.close();
+```
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810093618.png" alt="image-20200810093618921" style="zoom:67%;" />
+
+
+
+### 4.1.4、自定义分区器（Partitioner）
+
+在介绍ProducerAPI的时候，就提到了ProducerRecord在调用send()是会经过分区器的。现在我们来自定义我们的分区器。
+
+1. 实现`partitioner`接口，实现所有接口方法。
+
+2. 参考`DefaultPartitioner`（partitioner接口的实现类）的写法。
+
+   - `partition`方法被调用获取分区号，所有分区规则都放在此方法中。
+   - 此类用于没有指定partition的Record获取分区号！！
+
+3. 因为具体的分区规则按照业务逻辑编写，那么我们就直截了当直接return 1;
+
+   ```java
+   public class MyPartitioner implements Partitioner {
+       @Override
+       public int partition(String s, Object o, byte[] bytes, Object o1, byte[] bytes1, Cluster cluster) {
+           // 业务逻辑中的分区策略：...
+           
+           return 1;
+       }
+   
+       @Override
+       public void close() {
+   
+       }
+   
+       @Override
+       public void configure(Map<String, ?> map) {
+   
+       }
+   }
+   ```
+
+    
+
+4. 重点是：我们如何使用这个自定义的分区器？
+
+   在创建Producer的==配置文件中，配置`partitioner.class`！！值为分区器的全限定名==
+
+   ```java
+   props.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, "com.sakura.partitioner.MyPartitioner");
+   
+   // ProducerConfig.PARTITIONER_CLASS_CONFIG = "partitioner.class"
+   ```
+
+5. 启动测试：
+
+   ![image-20200810100913696](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810100913.png)
+
+
+
+### 4.1.5、同步消息发送生产者
+
+前面我们一直使用的是异步消息的发送和处理，当然也可以使用同步的消息发送。
+
+send()以后获取一个`Future`对象，其中存放是的send()的后的运算结果。可以使用`get()`方法获取，必要时会阻塞直到获取到结果。
+
+那么我们每次send后都调用一下`get()`方法，就不得不等数据发送完毕获取结果，再进行下一次send()，于是异步就变为了同步！！
+
+```java
+public class SyncProducer {
+    public static void main(String[] args) {
+        Properties props = new Properties();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "hadoop102:9092");
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
+
+        KafkaProducer<String, String> producer = new KafkaProducer<>(props);
+
+        for (int i = 0; i < 10; i++) {
+            // 9. 调用send()发送消息到缓冲区
+            Future<RecordMetadata> metadataFuture = producer.send(new ProducerRecord<String, String>("testB", "message-->" + i));
+            try {
+                // 获取计算结果
+                metadataFuture.get();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+
+        producer.close();
+    }
+}
+```
+
+
+
+
+
+## 4.2、Consumer API
+
+### 4.2.1、一个简单的消费者
+
+```java
+public class MyConsumer {
+    public static void main(String[] args) {
+        Properties props = new Properties();
+
+        // 连接集群
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "hadoop102:9092");
+        // 开启自动提交
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
+        // 自动提交的间隔
+        props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, 100);
+        // 配置 KV 反序列化器
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+
+        // 配置消费者组ID
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "Sakura-Group");
+
+        // 获取Consumer对象
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
+
+        // 消费者订阅topics
+        ArrayList<String> topics = new ArrayList<>();
+        topics.add("testC");
+        consumer.subscribe(topics);
+
+        while (true) {
+
+            // 消费者拉取消息
+            ConsumerRecords<String, String> records = consumer.poll(100);
+
+            for (ConsumerRecord<String, String> record : records) {
+                System.out.println(record.key() + "->" + record.value() +
+                        "  partition:" + record.partition() + " ,offset:" + record.offset());
+            }
+
+        }
+        // 关闭consumer
+        //consumer.close();
+    }
+}
+```
+
+> 1. 配置类创建，添加基本的配置信息（集群，自动提交，反序列化器，消费者组ID）
+> 2. 使用配置类创建一个`KafkaConsumer`对象。
+> 3. consumer调用`subscribe`订阅topics（注意不是在配置文件中配置的哦！）
+> 4. 无限循环使用`poll`拉取数据，并设置超时时间。（当拉取到空数据后，这段时间内不会继续拉取）
+> 5. 输出消息（key,value，partition，offset）
+
+注意，我们使用死循环来保证消费者一直存活。
+并且我们订阅的topic是不存在的时候，会自动创建一个topic,默认一个分区一个副本。
+
+启动生产者发送消息：
+
+```java
+for (int i = 0; i < 10; i++) {
+    // 9. 调用send()发送消息到缓冲区
+    producer.send(new ProducerRecord<String, String>("testC", "message" , String.valueOf(i)));
+}
+```
+
+消费者控制台输出：
+![image-20200810125607915](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810125608.png)
+
+
+
+
+
+### 4.2.2、offset重置
+
+`AUTO_OFFSET_RESET_CONFIG = "auto.offset.reset";`与消费者API中这个配置项有关。
+可选值:
+
+- `earliest`
+- `latest`
+
+> 何时触发Offset重置？
+>
+> 官方解释：*What to do when there is no initial offset in Kafka or if the current offset does not exist any more on the*
+> *server (e.g. because that data has been deleted):*
+>
+> <ul>
+> <li>earliest: automatically reset the offset to the earliest offset</li>
+> <li>latest: automatically reset the offset to the latest offset</li>
+> <li>none: throw exception to the consumer if no previous offset is found for the consumer's group</li>
+> <li>anything else: throw exception to the consumer.</li>
+> </ul>
+
+==当没有初始化Offset时，或者Offset已经不存在时==，常见的两种情况就是：
+
+- Offset所在的SegmentFile已经过期删除
+- Consumer切换了消费者组，没有被分配初始Offset
+
+ 
+
+配置earliest，消费者会拿到当前这个分区的**最早的可用的**（已经删除的为不可用）offset！(意味着目前所有有效的消息都以可以消费一遍)
+
+相反配置latest，消费者拿到的Offset，是这个分区目前**最新的**Offset
+
+![image-20200810132521494](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810132521.png)
+
+
+
+
+
+### 4.2.3、自动提交Offset
+
+初始程序中，我们配置`ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG`为true，即开启了Offset的自动提交。
+现在我们将其设置为false，看看有什么不同：
+
+启动消费者后，开启生产者生产了10条数据，消费者成功接收到。又生产了10条数据，还是正常接收到。
+但是当我们重启消费者后，刚刚的20条消费记录，由会被重新输出一遍。
+原因就是：==Offset没有被提交修改==
+
+![image-20200810135636685](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810135636.png)
+
+看这张图，就能很好理解：
+
+==其实我们的Offset是持久化在zookeeper节点或者__consumer_offsets这个topic中的，每当我们启动consumer时，都会将offset读取到consumer的进程内存中，以减少每次读取offset的资源消耗。那么就存在内存中offset和持久化的offset不一致的问题，所以需要定时提交一下offset==
+
+那么如果我们关闭了自动提交，又没有手动提交，虽然内存中offset在变化，可以正常消费信息，但是并没有持久化，下一次启动又会去读取持久化的offset，内存中offset的变化就都是"无用功"，所以才出现了已经消费的数据二次消费。（图中状态一到状态二）
+
+只要我们提交了offset，offset就会被重新持久化一次，更新节点或者topic中offset的数据信息，下一次读取也就是最新的了。(图中状态一到状态三)
+
+
+
+### 4.2.4、手动提交Offset
+
+> 自动提交Offset的缺点
+
+==开发人员不容易把握提交的间隔时间。==
+当提交时间间隔**较短**，在拉取了消息进行处理的过程中，就提交了offset，但是在处理数据过程中Consumer故障下线，再次上线上次没有处理完的消息也取不到了，因为早就提交了。（==消费者级别的消息丢失==）
+
+当提交时间间隔**较长**，拉取的数据已经处理完成，都准备拉取下一批数据了，Offset还没有提交，在提交前Consumer故障下线，再次上线，上一批已经处理的数据又要处理一遍（==重复消费==）
+
+> 手动提交API
+
+官方给出的两种提交方式
+
+- commitSync 同步提交
+
+  ```java
+  consumer.commitSync();
+  ```
+
+- commitAsync 异步提交
+
+  ```java
+  consumer.commitAsync(new OffsetCommitCallback() {
+      @Override
+      public void onComplete(Map<TopicPartition, OffsetAndMetadata> offsets, Exception exception) {
+          if (exception != null) {
+              exception.printStackTrace();
+          } else {
+              System.out.println(offsets);
+          }
+      }
+  });
+  ```
+
+**同步提交会阻塞当前线程，失败重试，直到提交成功**
+**异步提交有专门的线程提交，没有重试，可能提交失败。**
+
+==但是即使改为手动提交，消息丢失和重复消费的情况还是会存在==。
+只要消息处理和Offset提交是一前一后就可能会在提交Offset的时候出问题，导致提交不成功。
+我们唯一可以想到的就是把这==两个部分放在一个事务中==！！
+
+ 
+
+### 4.2.5、自定义存储Offset
+
+第三章就学到了，Offset在当前版本中有两种选择：`Zookeeper`、`__consumer_offsets`但是两种方案都不能满足我们将数据处理和offset提交放入到事务中完成的要求。那么我们只好自定义存储Offset。（例如将Offset存放到MySQL中，使用MySQL的事务）
+
+> 需要解决的问题
+
+1. 由于是存放到自定义的位置：存取Offset的步骤需要我们一手实现
+2. 要考虑到ConsumerGroup变动导致的消费者Rebalance从而带动的Offset变动的问题。
+   需要使用`ConsumerRebalanceListener`监听消费者组的变化，并采取对应的动作。
+
+
+
+
+
+## 4.3、拦截器API
+
+对于拦截器各位应该不陌生了，Kafka中拦截器主要应用在生产者一端，拦截ProducerRecord，然后对Key Value进行修改。==最好不要修改分区相关的信息，容易导致计算出错。==并且它也可以接收到消息发送后返回的元数据消息。从而判断消息是否发送成功。
+
+### 4.3.1、自定义拦截器
+
+1. 实现`ProducerInterceptor`接口
+
+2. 实现接口方法
+
+   - `onSend()`
+   - `onAcknowledgement()`
+   - `close()`
+   - `configure()`
+
+3. 代码框架:
+
+   ```java
+   public class TimestampInterceptor implements ProducerInterceptor {
+   
+   
+       /**
+        * 拦截ProducerRecord 对数据进行处理并返回
+        * @param record 
+        * @return
+        */
+       @Override
+       public ProducerRecord onSend(ProducerRecord record) {
+           return null;
+       }
+   
+       /**
+        * 接收消息发送到服务器后的发送结果信息，在close()方法调用时调用
+        * @param metadata 
+        * @param exception
+        */
+       @Override
+       public void onAcknowledgement(RecordMetadata metadata, Exception exception) {
+   
+       }
+   
+       /**
+        * 拦截器关闭
+        */
+       @Override
+       public void close() {
+   
+       }
+   
+       /**
+        * 增加和获取配置
+        * @param configs 
+        */
+       @Override
+       public void configure(Map<String, ?> configs) {
+   
+       }
+   }
+   ```
+
+
+
+### 4.3.1、拦截器案例
+
+> 案例描述：
+>
+> 使用拦截器链，为消息==加上时间戳==，在发送结束后==输出发送成功和失败的消息条数==。
+
+这个需求是可以放在一个拦截器的两个方法（onSend onAcknowledgement）中完成，但是…我偏不，我就要用两个拦截器！！
+
+
+
+> 实现
+
+拦截器一：TimestampInterceptor
+
+```java
+public class TimestampInterceptor implements ProducerInterceptor<String, String> {
+
+    /**
+     * 拦截ProducerRecord 对数据进行处理并返回
+     *
+     * @param record
+     * @return
+     */
+    @Override
+    public ProducerRecord onSend(ProducerRecord<String, String> record) {
+        // 由于ProducerRecord没有set方法，只能创建新对象
+        ProducerRecord<String, String> producerRecord = new ProducerRecord<>(
+                record.topic(),
+                record.partition(),
+                record.key(),
+                System.currentTimeMillis() + ": " + record.value()
+        );
+        return producerRecord;
+    }
+
+    /**
+     * 接收消息发送到服务器后的发送结果信息，在close()方法调用时调用
+     *
+     * @param metadata
+     * @param exception
+     */
+    @Override
+    public void onAcknowledgement(RecordMetadata metadata, Exception exception) {
+
+    }
+
+    /**
+     * 拦截器关闭
+     */
+    @Override
+    public void close() {
+
+    }
+
+    /**
+     * 增加和获取配置
+     *
+     * @param configs
+     */
+    @Override
+    public void configure(Map<String, ?> configs) {
+
+    }
+}
+```
+
+拦截器二：CountInterceptor
+
+```java
+public class CountInterceptor implements ProducerInterceptor<String, String> {
+
+    private static int success = 0;
+    private static int fail = 0;
+
+    @Override
+    public ProducerRecord<String, String> onSend(ProducerRecord<String, String> record) {
+        // 这里要将null 修改为record
+        return record;
+    }
+
+    @Override
+    public void onAcknowledgement(RecordMetadata metadata, Exception exception) {
+        if (metadata != null && exception == null) {
+            success++;
+        } else {
+            fail++;
+        }
+
+    }
+
+    @Override
+    public void close() {
+        System.out.println("sucess: " + success);
+        System.out.println("fail: " + fail);
+    }
+
+    @Override
+    public void configure(Map<String, ?> configs) {
+
+    }
+}
+```
+
+
+
+==注意这里的Close方法，在Producer调用close()时候才会调用。如果生产者不调用close方法，拦截器的close方法也不会调用的！==
+
+![image-20200810193636980](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810193637.png)
+
+
+
+> 生产者配置拦截器
+
+![image-20200810193950613](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810193950.png)
+
+配置类中，配置`INTERCEPTOR_CLASSES_CONFIG`
+
+```java
+ArrayList<String> interceptors = new ArrayList<>();
+interceptors.add("com.sakura.interceptor.TimestampInterceptor");
+interceptors.add("com.sakura.interceptor.CountInterceptor");
+
+props.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors)
+```
+
+
+
+> 启动
+
+消费者输出
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810194812.png" alt="image-20200810194812289" style="zoom:67%;" />
+
+生产者输出：
+
+![image-20200810194931038](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810194931.png)	
+
+bingo!!!
+
+----
+
+
+
+# 五、Kafka监控
+
+前面学习使用了Kafka，但是我们并不清楚集群的状态，现在我们使用KafkaEagle作为监控平台，实时监控集群的状态。
+
+## 5.1、Kafka Eagle安装和配置启动
+
+1. 官网下载tar.gz包 [KafkaEagle官方地址](https://www.kafka-eagle.org/)
+
+2. 第一次解压后，对其中的 Kafka-eagle-web再次解压并解压到/opt/module目录下。
+
+3. 修改kafka启动脚本`kafka-server-start.sh`
+
+   ```shell
+   if [ "x$KAFKA_HEAP_OPTS" = "x" ]; then
+       export KAFKA_HEAP_OPTS="-Xmx1G -Xms1G"
+   fi
+   ```
+
+   改为
+
+   ```shell
+   if [ "x$KAFKA_HEAP_OPTS" = "x" ]; then
+       export KAFKA_HEAP_OPTS="-server -Xms2G -Xmx2G -XX:PermSize=128m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:ParallelGCThreads=8 -XX:ConcGCThreads=5 -XX:InitiatingHeapOccupancyPercent=70"
+       export JMX_PORT="9999"
+   fi
+   ```
+
+   改完后分发。
+
+4. 配置Eagle环境变量
+
+   ```shell
+   export KE_HOME=/opt/module/kafka-eagle-web-2.0.1
+   export PATH=$PATH:$KE_HOME/bin
+   ```
+
+   source /etc/profile 重新加载环境变量
+
+5. 修改kafka-eagle配置文件 :`/opt/module/kafka-eagle-web-2.0.1/conf/system-config.properties`
+
+   ```properties
+   kafka.eagle.zk.cluster.alias=cluster1,cluster2
+   cluster1.zk.list=tdn1:2181,tdn2:2181,tdn3:2181
+   cluster2.zk.list=xdn10:2181,xdn11:2181,xdn12:2181
+   ```
+
+   这个默认配置是监控的两个集群，我们只有一个所以改为：
+
+   ```properties
+   kafka.eagle.zk.cluster.alias=cluster1
+   cluster1.zk.list=hadoop102:2181,hadoop103:2181,hadoop103:2181
+   ```
+
+   ---
+
+   
+
+   ```properties
+   kafka.eagle.webui.port=8048
+   ```
+
+   这是web页面的端口
+
+   ----
+
+    
+
+   ```properties
+   cluster1.kafka.eagle.offset.storage=kafka
+   cluster2.kafka.eagle.offset.storage=zk
+   ```
+
+   offset的存储位置：kafka、zk,我们只保留集群一的，并设置存储在kafka
+
+   ----
+
+    
+
+   ```properties
+   kafka.eagle.metrics.charts=true
+   ```
+
+   检查图表功能开启
+
+   ----
+
+    
+
+   ![image-20200810203541292](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810203541.png)
+
+   kafka JDBC连接，这里给了两套配置（Sqlite，Mysql)，我们选择MySQL的配置
+
+   ```properties
+   kafka.eagle.driver=com.mysql.jdbc.Driver
+   kafka.eagle.url=jdbc:mysql://127.0.0.1:3306/kafka_eagle?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull
+   kafka.eagle.username=root
+   kafka.eagle.password=123456
+   ```
+
+   数据库不存在会自动创建。
+
+    
+
+6. 重启Kafka和zookeeper集群
+
+7. 检查kafka-eagle-web bin目录下的ke.sh文件的执行权限，使用`ke.sh start`启动！！
+
+   <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810204419.png" alt="image-20200810204419426" style="zoom:80%;" />
+
+    
+
+8. 访问web页面，并使用默认的账号密码登录
+
+   ![image-20200810204611384](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810204611.png)
+
+   里面的使用慢慢摸索吧
+
+9. 使用`ke.sh stop`停止服务。
+
+---
+
+
+
+# 六、Flume对接Kafka
+
+
+
+> 为什么Flume要对接Kafka？应用场景？
+
+首先Flume和Kafka在实际应用场景中都存在一些缺陷：
+
+- Flume无法动态扩展 采集数据传输的目的地
+- Kafka的生产者的数据来源有限，例如监控目录就有困难
+
+现在将两者结合，==Flume使用功能强大的Source组件监控数据 使用KafkaSink，作为Kafka的生产者传输数据到Kafka，Kafka这边动态上下线消费者实现动态扩展 传输目的地。==
+
+![image-20200810214312227](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810214312.png)
+
+
+
+
+
+> 对接实现
+
+1. 配置Flume(flume-kafka.conf)
+
+   ```properties
+   # 组件命名
+   a1.sources = r1
+   a1.sinks = k1
+   a1.channels = c1
+   
+   # Source Netcat
+   a1.sources.r1.type = netcat
+   a1.sources.r1.bind = hadoop102
+   a1.sources.r1.port = 44444
+   
+   # Sink KafkaSinke
+   a1.sinks.k1.type = org.apache.flume.sink.kafka.KafkaSink
+   a1.sinks.k1.kafka.topic = testC
+   a1.sinks.k1.kafka.bootstrap.servers = hadoop102:9092,hadoop103:9092,hadoop104:9092
+   a1.sinks.k1.kafka.flumeBatchSize = 20
+   a1.sinks.k1.kafka.producer.acks = 1
+   a1.sinks.k1.kafka.producer.linger.ms = 1
+   
+   # Channel MemoryChannel
+   a1.channels.c1.type = memory
+   a1.channels.c1.capacity = 1000
+   a1.channels.c1.transactionCapacity = 100
+   
+   # 对接Channel
+   a1.sources.r1.channels = c1
+   a1.sinks.k1.channel = c1
+   ```
+
+   
+
+   KafkaSink的配置项都是Producer的一些配置，官方给出的配置清单：
+   ![image-20200810215216473](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810215216.png)
+
+2. 启动一个Kafka的消费者
+
+3. Flume启动Agent
+
+   `bin/flume-ng agent -c conf/ -f job/netcat-kafka.conf -n a1`
+
+4. 启动netcat连接agent
+
+   `nc hadoop102 44444`
+
+    
+
+5. netcat发送消息，查看消费者控制台输出：
+
+   ![image-20200810215759818](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200810215759.png)
+
+
+
+> 进化 （数据分类放置到不同的Topic）
+
