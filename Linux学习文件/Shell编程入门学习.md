@@ -444,7 +444,7 @@ echo $s
 基本语法(2)
 
 ```shell
-for 变量 in value1,value2,value3
+for 变量 in value1 value2 value3
 do
 	#code
 done
