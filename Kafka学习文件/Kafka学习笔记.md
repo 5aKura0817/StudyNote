@@ -2027,3 +2027,112 @@ bingo!!!
 
 > 进化 （数据分类放置到不同的Topic）
 
+我们从外界采集的数据，可能==需要分类放置到不同的Topic中==，**按照之前Flume的学习案例，我们会在Flume中设置一个拦截器，为特定的数据添加header，然后通过配置Channel选择器为对应的header属性选择Channel，然后发送到不同的Sink组**。所以我们需要在原来的基础上增加一个Channel和KafkaSink。这样的做法**十分繁杂**，Flume官方对于Kafka做了很多的适配，不信你看这段话：
+
+![image-20200811084327699](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200811084327.png)
+
+说KafkaSink中对于Event的header中的`topic`，`key`这两个属性是可以直接被Kafka所使用！！
+当header中存在 `topic`属性，那么将覆盖配置文件中的topic配置，将数据写入到header中指定的topic。
+当header中存在`key`属性，其可以作为消息的key,同样可以用于分区的选择，若不存在则为null，在没有指定topic的情况下随机发送到topic
+
+==Event的Header里面的`topic`,`key`是可以直接被Kafka拿去用的，并且没有什么不同==
+
+==那么现在我们实现数据分类，只需要一个Flume拦截器，判断数据内容，在Header上设置好topic属性就行了！！==
+
+----
+
+1. Flume拦截器代码
+
+   ```java
+   public class NumberInterceptor implements Interceptor {
+   
+       private static final Pattern NUMBER_PATTERN = Pattern.compile("[0-9]+");
+       private ArrayList<Event> handleEvents;
+   
+       @Override
+       public void initialize() {
+           handleEvents = new ArrayList<>();
+       }
+   
+       @Override
+       public Event intercept(Event event) {
+           String data = new String(event.getBody());
+           Map<String, String> headers = event.getHeaders();
+           Matcher matcher = NUMBER_PATTERN.matcher(data);
+           if (matcher.find()) {
+               headers.put("topic", "testB");
+           } else {
+               headers.put("topic", "testC");
+           }
+           return event;
+       }
+   
+       @Override
+       public List<Event> intercept(List<Event> list) {
+           handleEvents.clear();
+           list.forEach(event -> handleEvents.add(intercept(event)));
+           return handleEvents;
+       }
+   
+       @Override
+       public void close() {
+   
+       }
+   
+       public static class Builder implements Interceptor.Builder {
+           
+           @Override
+           public Interceptor build() {
+               return new NumberInterceptor();
+           }
+           
+           @Override
+           public void configure(Context context) {
+           }
+       }
+   }
+   ```
+
+    
+
+2. 打包发到集群上（/opt/module/flume1.7.0/lib）
+
+3. Flume配置文件修改：
+
+   ```properties
+   # 拦截器配置
+   a1.sources.r1.interceptors = i1
+   a1.sources.r1.interceptors.i1.type = com.sakura.interceptor.NumberInterceptor$Builder
+   ```
+
+    
+
+4. 启动topicB topicC的消费者
+
+5. 启动Agent,netcat连接发送消息
+
+   ![image-20200811092816510](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200811092816.png)
+
+
+
+
+
+# 七、常见面试题
+
+1. Kafka中的 ISR(InSyncRepli)、OSR(OutSyncRepli)、AR(AllRepli)
+2. Kafka的HW、LED
+3. 消息顺序性如何体现？（分区内有序）
+4. 分区器、序列化器、拦截器，处理的顺序
+5. 客户端架构，几个线程
+6. 消费者和topic分区数量的控制
+7. 那些情况会导致重复消费、消息漏消费（提交Offset故障）
+8. topic的分区可不可以增加？可不可以减少？（可增不可减）
+9. Kafka内部Topic,有什么作用？
+10. 分区分配的概率和策略
+11. Kafka的log目录结构（消息数据文件=>index、log），如何定位消息？
+12. Kafka Controller的作用
+13. 为什么Kafka性能高，速度快？采用了那些机制？
+14. ExactlyOnce语义和幂等性
+
+
+
