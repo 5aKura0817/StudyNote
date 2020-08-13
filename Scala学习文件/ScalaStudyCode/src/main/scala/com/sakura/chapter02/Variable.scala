@@ -1,6 +1,7 @@
 package com.sakura.chapter02
 
 import scala.collection.StringOps
+import scala.io.StdIn
 
 /**
  * @author 5akura
@@ -27,7 +28,8 @@ object Variable {
     var j = 4.56
     var k = 2.4f
     var m = false
-    StringOps
+
+    
 
   }
 }

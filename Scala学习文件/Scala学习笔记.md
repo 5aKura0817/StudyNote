@@ -41,13 +41,13 @@
 > import scala.reflect.ScalaSignature;
 > 
 > public final class HelloScala {
->   public static void main(String[] paramArrayOfString) {
->     HelloScala$.MODULE$.main(paramArrayOfString);
->   }
+> public static void main(String[] paramArrayOfString) {
+>  HelloScala$.MODULE$.main(paramArrayOfString);
+> }
 > }
 > ```
 >
->  
+> 
 >
 > HelloScala$.class
 >
@@ -55,15 +55,15 @@
 > import scala.Predef$;
 > 
 > public final class HelloScala$ {
->   public static final HelloScala$ MODULE$ = new HelloScala$();
->   
->   public void main(String[] args) {
->     Predef$.MODULE$.println("hello scala");
->   }
+> public static final HelloScala$ MODULE$ = new HelloScala$();
+> 
+> public void main(String[] args) {
+>  Predef$.MODULE$.println("hello scala");
+> }
 > }
 > ```
 >
->  
+> 
 >
 > 两者之间是一个相互调用的关系。HelloScala类的main中调用HelloScala\$类中静态变量 MODULE$的main方法，
 > 而HelloScala\$类中 MODULE\$是一个当前类的实例化对象，然后调用main方法，其main方法中又调用了Predef\$类中MODULE\$的println方法。
@@ -213,6 +213,8 @@ var m = false
 
 
 
+变量声明时，标识符和其他语言规则一样，不可以使用数字作为变量名开头。
+
 ### 2.2 val与var
 
 虽然两者都可以用来声明变量，但是使用`val`声明的变量时赋值后，==不可以再改变值。相当于Java中的final变量==
@@ -281,10 +283,6 @@ Scala所有对象都有同一个祖先对象`Any`,(相当于Java中的Object)。
 - Nothing：是任意类型的子类
 
 两个类都属于底层类（BottomClass）,**Nothing常用于异常的抛出和处理**，我们知道在Java中异常是区分范围大小的，只有范围更大的（父类，或间接父类）的异常才能接收比其范围小的异常类型。例如Exception类是可以接收和处理所有Exception类的，而IOException则能接收处理的异常就相对较小。那么**如果将异常定义为Nothing类型，那么任何类都可以正常接收和处理到异常了！！**
-
-
-
-还有一点：**Scala中完全保留了Java的隐式类型转换机制。即更小范围的类型可以转化为更大范围的类型，反之则不行。**（例如：Float转Double可以，反之不行）
 
 
 
@@ -368,6 +366,343 @@ Scala所有对象都有同一个祖先对象`Any`,(相当于Java中的Object)。
 
    
 
-- Nothing是一切类的子类，且是一个不可实例化的抽象类，并且不可以被继承！
+- Nothing是一切类的子类，且是一个不可实例化的抽象类，并且不可以被继承
 
-  
+
+
+#### 2.3.3、类型转换
+
+> 隐式类型转换
+
+**Scala中完全保留了Java的隐式类型转换机制。即更小范围的类型可以转化为更大范围的类型，反之则不行。**（例如：Float转Double可以，反之不行）**Byte、Short和Char类型的数据之间不会自动转换。三者类型的数据放在一起计算都先转为Int**
+
+当数据进行计算的时候，都会先进行类型隐式转换，先向上转换为最近的类型，然后计算。
+
+```scala
+var s:Short = 5
+s = s+2 //error,计算时因为2是Int,所以都先转化为Int类型然后计算，结果为Int类型, 将Int类型赋值给Short类型（error）
+```
+
+
+
+> 强制类型转换
+
+任何基本类型的数据，都有`toInt`，`toDouble`，`toFloat`这样的方法，使用这种方法可以进行强制类型转换！！==强制类型转换就可能导致精度丢失或值溢出==
+
+String类型的数据，转数值类型的时候，确保数据的规范性以及类型的正确。否者会抛`NumberFormatException`异常
+
+
+
+
+
+
+
+## Chap03.运算符
+
+> 取模运算的原则
+
+- a%b <=> a - (a/b) * b
+- 取模运算的结果，总与被取模数的符号一致！
+
+
+
+> ++ 和 --
+
+在Scala中不能使用++ 和 -- 改而使用 `+=` 和 `-=`
+
+
+
+> 关系运算符
+
+浮点型数据进行比较，哪怕值相同，类型不同结果也是false
+
+```scala
+var d:Double = 2.2
+var f:Float = 2.2f
+println(d==f) // false
+```
+
+ 
+
+> 赋值运算符
+
+| 运算符      |               |
+| ----------- | ------------- |
+| x \>>= n    | 右移n位后赋值 |
+| x <<=n      | 左移n位后赋值 |
+| &=、\|=、^= | …             |
+
+
+
+> 三目运算
+
+Scala中不支持三目运算，改为if-else完成(**Scala设计概念：同一件事情尽量只有一种解决方法，保证代码风格统一**)
+
+```scala
+// var i = (5>3)?5:3 
+var i = if (5>3) 5 else 3
+```
+
+
+
+> 获取键盘输入
+
+`StdIn.readxxx` （trait scala.io.StdIn的方法，拿来即用）
+
+```scala
+var age = StdIn.readInt()
+var name = StdIn.readLine()
+```
+
+
+
+## Chap04.流程控制
+
+> 范围数据的for循环
+
+for(item <- start **to** end){ … }
+
+```scala
+object ForDemo {
+  def main(args: Array[String]): Unit = {
+    for (i <- 1 to 10){
+      println(s"$i, hello world")
+    }
+    /**
+     * 1, hello world
+     * 2, hello world
+     * 3, hello world
+     * 4, hello world
+     * 5, hello world
+     * 6, hello world
+     * 7, hello world
+     * 8, hello world
+     * 9, hello world
+     * 10, hello world
+     */
+  }
+}
+```
+
+这种，类似于Java的增强for循环，可以用于对集合元素的遍历！！
+
+```scala
+var list = List("Hello","World",10,30,false)
+for (item <- list){
+    println(item)
+}
+
+/**
+* Hello
+* World
+* 10
+* 30
+* false
+*/
+```
+
+
+
+> 范围数据循环2
+
+for(item <- start **until** end){ … }
+
+```scala
+object ForDemo02 {
+  def main(args: Array[String]): Unit = {
+    for (i <- 1 until 6){
+      println(i)
+    }
+
+    /**
+     * 1
+     * 2
+     * 3
+     * 4
+     * 5
+     */
+  }
+}
+```
+
+
+
+> For循环，循环守卫
+
+案例：
+
+```scala
+object ForDemo03 {
+  def main(args: Array[String]): Unit = {
+    for (i <- 1 to 10 if i%2==0){
+      println(s"${i} is a even number")
+    }
+
+    /**
+     * 2 is a even number
+     * 4 is a even number
+     * 6 is a even number
+     * 8 is a even number
+     * 10 is a even number
+     */
+  }
+}
+```
+
+for循环中同行的if判断式，就是循环保卫式，为true时，执行循环中的语句，为false则跳过当前循环值（类似continue）
+
+
+
+> For循环 引入变量
+
+可以直接在for循环的同行中，使用循环变量进行操作。
+
+```scala
+object ForDemo04 {
+  def main(args: Array[String]): Unit = {
+    for (i <- 1 to 10; j = 2 * i){
+      println(s"$i * 2 = $j")
+    }
+
+    /**
+     * 1 * 2 = 2
+     * 2 * 2 = 4
+     * 3 * 2 = 6
+     * 4 * 2 = 8
+     * 5 * 2 = 10
+     * 6 * 2 = 12
+     * 7 * 2 = 14
+     * 8 * 2 = 16
+     * 9 * 2 = 18
+     * 10 * 2 = 20
+     */
+  }
+}
+```
+
+
+
+> 嵌套For循环简写
+
+```scala
+object ForDemo05 {
+  def main(args: Array[String]): Unit = {
+    for (i <- 1 to 10; j <- 1 to i){
+      print(j+" ")
+      if (j==i){
+        println()
+      }
+    }
+
+    /**
+     * 1 
+     * 1 2 
+     * 1 2 3 
+     * 1 2 3 4 
+     * 1 2 3 4 5 
+     * 1 2 3 4 5 6 
+     * 1 2 3 4 5 6 7 
+     * 1 2 3 4 5 6 7 8 
+     * 1 2 3 4 5 6 7 8 9 
+     * 1 2 3 4 5 6 7 8 9 10 
+     */
+  }
+}
+```
+
+等价写法：
+
+```scala
+for (i <- 1 to 10) {
+    for (j <- 1 to i) {
+        print(j + " ")
+        if (j == i) {
+            println()
+        }
+    }
+}
+```
+
+当i的for循环中有业务逻辑，就会出现问题，还是要使用传统的循环。
+
+
+
+
+
+
+
+# Scala练习
+
+## Practice01
+
+1. 求3开方后，再平方的值与3相差多少？
+
+   ```scala
+   3 - math.pow(math.sqrt(3),2)
+   // result:
+   Double = 4.440892098500626E-16
+   ```
+
+    
+
+2. 用字符串乘以一个数字，效果如何？
+
+   可以查看官方文档的`StringOps`的`*`方法描述：
+   ![image-20200813202555269](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813202555.png)
+
+   返回一个原字符拼接n次后的字符串：
+
+   ```scala
+   scala> "hello"*3
+   val res1: String = hellohellohello
+   ```
+
+    
+
+3. `10 max 2`的含义，max方法在哪个类中定义？
+
+   ```scala
+   scala> 10 max 2
+   val res2: Int = 10
+   ```
+
+   很多类中都有max方法。
+
+    
+
+4. 用BigInt计算2的1024次方
+
+   ```scala
+   scala> var num:BigInt = 2;
+   	 > num.pow(1024);
+   var num: BigInt = 2
+   val res5: scala.math.BigInt = 179769313486231590772930519078902473361797697894230657273430081157732675805500963132708477322407536021120113879871393357658789768814416622492847430639474124377767893424865485276302219601246094119453082952085005768838150682342462881473913110540827237163350510684586298239947245938479716304835356329624224137216
+   ```
+
+    
+
+5. 查找字符串的首位字符
+
+   ```scala
+   scala> var str:String = "hello";
+   	 > println(str.charAt(0));
+        > println(str.charAt(str.length-1))
+   
+   h
+   o
+   var str: String = hello
+   ```
+
+   `take(n)`,取出字符串的前n个字符！
+
+   `takeRight(n)`,从字符串右边开始，取出前n个字符!
+   
+   ```scala
+   scala> "hello".take(1);
+   val res18: String = h
+   
+   scala> "hello".takeRight(1);
+   val res19: String = o
+   ```
+   
+   

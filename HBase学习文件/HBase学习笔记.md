@@ -263,7 +263,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
 
 
 
-## 2.2、命令行操作
+## 2.2、命令行操作 DDL
 
 ### 2.2.1、基本操作
 
@@ -356,7 +356,9 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
 
    提醒我们表正在使用，回到我们查看表的位置，有一个OnlineRegions和OfflineRegions，前者表示Region处于启用状态即enable状态，需要使用`disable ’tableName‘`先停用，变为OfflineRegion后，才能使用drop删除表
 
-    
+5. 清空表`truncate`
+
+   ![image-20200813105526430](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813105526.png)
 
 
 
@@ -392,3 +394,353 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
 4. 删除命名空间
 
    `drop_namespace xxx`，当命名空间中有内容时，会报异常。==必须先清空命名空间再删除！！==
+
+
+
+
+
+## 2.3、命令行操作 DML
+
+### 2.3.1、数据增&查
+
+建表：
+
+```shell
+create 'stu','info','scores'
+```
+
+
+
+> 增加数据
+
+`put '表名','row_key','列族:列名','value'` （更多方法，使用put或者help "put"查看帮助）
+
+ ```shell
+hbase(main):017:0> put 'stu','1002','info:name','zhangsan'
+
+hbase(main):018:0> put 'stu','1002','info:sex','male'
+
+hbase(main):019:0> put 'stu','1002','scores:math','90'
+
+hbase(main):020:0> put 'stu','1002','scores:ds','88'
+
+...
+ ```
+
+ 
+
+> 查询数据
+
+`scan` 全表扫描
+
+```shell
+scan 'stu'
+或者：
+stu = get_table 'stu'
+stu.scan
+```
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813090453.png" alt="image-20200813090453013" style="zoom:67%;" />
+
+`scan` 范围扫描
+
+`scan 'tableName',{STARTROW=>'row_key',STOPROW=>'row_key2'}` [row_key, row_key2)范围（左闭右开）
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813091448.png" alt="image-20200813091447989" style="zoom:67%;" />
+
+STARTROW 和 STOPROW可以省略一个，表示从 STARTROW扫描到尾 或者 从头扫描到STOPROW。
+
+
+
+
+
+`get` 指定列取值
+
+```shell
+get 'stu','1001'
+COLUMN                               CELL                           
+ info:age                            timestamp=1597280140839, value=20                             
+ info:name                           timestamp=1597280104048, value=sakura                             
+ scores:db                           timestamp=1597280186785, value=70                           
+ scores:ds                           timestamp=1597280198870, value=61                             
+ scores:math                         timestamp=1597280168731, value=66
+
+get 'stu','1001','info'
+COLUMN                               CELL                            
+ info:age                            timestamp=1597280140839, value=20                            
+ info:name                           timestamp=1597280104048, value=sakura                                       
+
+get 'stu','1001','info:name','scores:math'
+COLUMN                               CELL                             
+ info:name                           timestamp=1597280104048, value=sakura                        
+ scores:math                         timestamp=1597280168731, value=66
+```
+
+
+
+
+
+### 2.3.2、数据改&删
+
+> 修改数据
+
+在HBase中，**直接使用Put修改值**，系统会判断时间戳的位置，来决定哪条数据是最新数据。
+
+![image-20200813100204212](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813100204.png)
+
+看似原值sakura，是被"删除"了，但是可以通过这样的方式查看历史数据：
+
+`scan 'stu',{RAW=TRUE,VERSIONS=10}`，即查看所有记录的最近10条版本记录。
+
+![image-20200813100546961](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813100547.png)
+
+对比来看，其实最终展示的数据都是时间戳最新的数据！！！那么也就是如果我们现在put一条数据，如果时间戳小于最新数据的时间戳，其实无济于事。
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813100950.png" alt="image-20200813100950897" style="zoom:80%;" />
+
+果然不错，所以==时间戳在HBase中，作为数据的版本依据，非常重要！！==
+
+![image-20200813101728980](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813101729.png)
+
+ 
+
+> 删除数据
+
+`delete '表名','row_key','列名'`
+
+```shell
+delete 'stu','1002','info:sex'
+```
+
+![image-20200813102242343](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813102242.png)
+
+这个删除操作，非常贴心地将删除时间戳与创建值的时间戳进行重叠。为了就是不让后续的插入操作受删除操作的时间戳影响，导致插入失败。
+
+
+
+我们上面修改操作是按照时间戳取最新的值，作为有效值，那么我们执行一次delete，你猜结果如何？
+
+你以为laoli(name时间轴上第二个值)会冒出来？delete操作还是贴心地把时间戳和当前有效数据的创建时间戳做了重叠，那么之前的put都是无效的了。
+
+![image-20200813102937228](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813102937.png)
+
+当来获取的数据的时候，一看是type=delete，就知道这个值被删除了。
+
+与之对应，如果我们删除的是当前有效值时间戳之前的值（例如laoli）,那么是不会影响有效值的哦！！
+但是如果**超前删除**，效果是什么样，应该就可以脑补出来了，就是那个时间点前，所有的put都是无用功！==但是如果你集群的时间还没有监测到你的超前删除时，还是可以取到有效值的。==图示：
+
+![image-20200813104242928](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813104242.png)
+
+你超前的修改与删除操作，能被集群的时间能够监测到时，都会一一生效。
+
+==总之一句话：时间戳是王道，谁大听谁的！！==
+
+
+
+> 删除整行
+
+使用`deleteall '表名','row_key'`
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813105351.png" alt="image-20200813105351013" style="zoom:67%;" />
+
+暂时没有找到删除列族的命令。。。。
+
+----
+
+
+
+### 2.3.3、数据多版本（VERSIONS）
+
+之前在修改表中，我们修改了表的列族的**VERSIONS属性，此属性表示该列族保留多少个数据版本。**
+
+虽然我们可以使用{RAW=>TRUE,VERSIONS=>10}看到所有数据的10条版本，但是想要具体查看具体某条数据的某列的版本数量时，就受到了这个参数的限制。
+
+例如：
+
+![image-20200813111023815](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813111023.png)
+
+  
+
+当我们使用`get '表名','row_key,{COLUME='列族:列名',VERSIONS=n}`查看某个数据的最近n个版本的时候，结果却是：
+
+![image-20200813111319961](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813111320.png)
+
+只有一条，就是因为列族那个VERSIONS属性的设置是1，只保存了一个版本的数据。我们现在将其修改为3：
+
+`alter 'stu',{NAME=>'info',VERSIONS=>3}`，再次尝试：
+
+![image-20200813111738312](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813111738.png) 
+
+继续修改，版本继续增加，但是只保留最新的3个。
+
+
+
+
+
+# 三、HBase进阶
+
+## 3.1、架构原理（进阶版）
+
+![img](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813130656.png)
+
+从上往下聊：
+
+- Client，连接HRegionServer，操作表数据。
+- Zookeeper：存放RegionServer的地址，以及HMaster的一些信息。
+- HMaster，监控所有HRegionServer，调度HRegion分配给HRegionServer维护，协调工作
+- HRegionServer：维护着一个HLog以及HMaster分配的Region
+- HLog(WAL log)：WAL意为write ahead log, 作用类似于HDFS中Edits文件，记录所有的数据操作记录。**用于做容灾备份，一旦RegionServer宕机，可以从HLog中恢复。**
+- HRegion: 存储某张表的一段数据的文件目录
+- Store：每个Region按照列族拆分的单元数据。
+- MemStore: 加载到内存的列族中的数据，当达到一定阈值后，会被`flush`（刷写）到文件中（磁盘）。
+- StoreFile：MemStore刷写后形成的文件，后续不断刷写追加。
+- HFile：StoreFile的底层**存储格式**
+- DFS Client: 接收HBase的数据写入请求，连接HDFS操作文件系统
+- HDFS DataNode：处理DFS Client的命令，对数据进行存储。
+
+[参考博客：详解HBase架构原理](https://www.cnblogs.com/steven-note/p/7209398.html)
+
+
+
+## 3.2、写流程
+
+> 流程
+
+先用一张图来说明一下：
+
+![image-20200813140816774](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813140816.png)
+
+ 简述流程：
+
+1. Client首先请求Zookeeper获取到meta表（命名空间hbase中的一个region，还有一个叫namespace，均属于内部表）的位置
+
+   ![image-20200813141042495](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813141042.png)
+
+   
+
+2. 获取到meta表的位置后，到对应的RegionServer上扫描meta表的数据。找到要写数据的目标表的位置信息
+
+3. 获取目标表的位置后，到相应的RegionServer上执行写数据操作。
+
+
+
+> 关键点演示，检查对应位置
+
+- Zookeeper上meta表位置的存放节点：
+
+  ![image-20200813141626589](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813141626.png)
+
+  通过web页面来检验一下：
+
+  <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813141711.png" alt="image-20200813141710949" style="zoom: 50%;" />
+
+- scan 扫描一下meta表：
+
+  ![image-20200813142132283](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813142132.png)
+
+  果然是可以拿到表的信息以及其所在的RegionServer的。
+
+  ==这里只有一个RegionServer，但是当表变得足够大后，切分为了多个Region就会分散到多个RegionServer上，就会获取到多个RegionServer!!==
+
+  通过web页面的信息来验证一下：
+  <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813142501.png" alt="image-20200813142501477" style="zoom:67%;" />
+
+
+
+> 小知识点：在老版本中，因为考虑到meta表也可能被切分，所以就用了`_ROOT_`表来存储所以meta表的位置信息，以防只读取了一个meta表而导致获取表的位置信息不准确。但是实际情况中，meta表基本不可能被切分。 后续版本已经移除。
+
+
+
+通过源码的标注，来看看数据是怎么写入的
+
+> 写数据流程，源码
+
+找到HRegion类的源码，代码中注释了STEP1~STEP9：
+
+1. 获取大量的锁，保证至少获取到一个锁（JUC）
+
+2. 更新时间戳，确保服务端的时间戳是最新的，所有的操作时间戳默认使用服务端的时间戳
+
+3. 创建对WAL的编辑，但是不写入WAL文件
+
+4. 将最后的编辑内容追加到WAL文件中，但是不同步！！
+
+5. 写回到MemStore
+
+   这里你可能会疑问WAL不同步，就写到MemStore中，发生意外宕机不是完了？源码中给了解释：
+
+   *It is ok to write to memstore  first without syncing the WAL because we do not roll forward the memstore MVCC. The MVCC will be moved up when the complete operation is done. These changes are not yet visible to scanners till we update the MVCC. The MVCC is moved only when the sync is complete.*
+
+   用到了`MVCC`(MultiVersionConsistencyControl,多版本控制协议)。==在MemStore写入成功，更新MVCC之前，所有的写操作对外界是不可见的。如果写入MemStore发生了意外，就将清除所有的写入内容。（回滚）==
+
+   ![image-20200813154545439](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813154545.png)
+
+    
+
+6. 释放锁，等其他一些资源释放操作
+
+7. 同步WAL
+
+8. 更新推动MVCC,使得写操作的内容修改可以被扫描到
+
+   以下是回滚代码逻辑：
+
+   <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813155110.png" alt="image-20200813155110640" style="zoom:67%;" />
+
+==数据操作先写到WAL(Hlog)，然后写回MemStore，然后同步WAL，写回和同步过程中任意一个出现异常都会回滚，撤销写入。==
+
+
+
+## 3.3、MemStore刷写
+
+[推荐阅读：HBase 入门之数据刷写(Memstore Flush)详细说明](https://blog.csdn.net/b6ecl1k7BS8O/article/details/86486186)
+
+前面我们讲到，数据到达HBase的时候，首先是进入到WAL（即HLog文件）中，然后写回到MemStore中，而MemStore终归还是内存数据，还是要写入到磁盘(文件系统)中去的。那么何时触发这个flush（刷写）操作呢？
+
+> 什么情况会触发刷写？
+
+我们先看官方文档：
+![image-20200813191547820](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813191547.png)
+
+ ==文档中说明：最小的刷写单元是Region而不是MemStore！！==
+
+1. 单个MemStore内存占用达到配置值（`hbase.hregion.memstore.flush.size`）时
+2. 全局所有MemStore内存占用的达到配置值（`hbase.regionserver.global.memstore.upperLimit（旧版本）`，`hbase.regionserver.global.memstore.size (新版本)`）时
+3. 当WAL log文件的数量达到配置值（`hbase.regionserver.max.logs`）时，保存着最老的WAL Log文件的MemStore最先刷写。
+
+除此以外，还有三种：
+
+4. 定期自动刷写
+5. 数据更新超过一定阈值
+6. 手动触发刷写
+
+
+
+#### 1、单个MemStore达到内存占用上限
+
+当单个MemStore的内存占用超过了（`hbase.hregion.memstore.flush.size`，默认值134217728B=**128MB**）,是其所在的Region中所有的MemStore都要进行刷写。（注意这样的机制容易产生小文件，这个与刷写策略有关。）
+
+当MemStore的刷写速度比MemStore的写入速度慢的时候，MemStore会不断增长，增加刷写的负担并且随时可能OOME(内存溢出)，所以当MemStore内存占用达到（`hbase.hregion.memstore.flush.size * hbase.hregion.memstore.block.multiplier` ）`hbase.hregion.memstore.block.multiplier`默认值4，即 128MB*4=**512MB**时，会强制叫停对该Store的数据写入！！此时继续请求写入会报`RegionTooBusyException`异常。
+
+ 
+
+#### 2、RegionServer的MemStore内存总和达到上限
+
+官方文档给出的内存上限的配置项~~`hbase.regionserver.global.memstore.upperLimit`~~已经被新版本的`hbase.regionserver.global.memstore.size`替代了。官方文档对于这个配置项的描述：
+
+![image-20200813194635406](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813194635.png)
+
+ 
+
+意思是说，这个配置项的值与其所在的RegionServer所占用的堆内存大小有关，**默认按照40%分配**。即RegionServer会将自己占用内存的40%分配给MemStore，但是决定不可能让你用满这40%的堆内存，于是就有了这个配置项`hbase.regionserver.global.memstore.size.lower.limit` 替代的旧版的~~`hbase.regionserver.global.memstore.lowerLimit`~~
+
+此项的默认配置为**95%**，对这项的描述是**当分配给MemStore的内存使用占比达到该值，就会启动强制刷新。**例如当前RegionServer堆内存占用是2G，那么RegionServer中所有MemStore的内存占用达到 2×40%×95%=0.76G的时候，就会开始顺序强制刷写MemStore。
+
+为什么不能用到100%呢？因为一旦使用到达100%的时候，此刷写过程就会因为内存不足受到操作限制！！
+
+==注意这里的刷写是顺序刷写！！从最大内存占用的Region的MemStore开始刷写，直到所有的MemStore的内存占用低于了最高限制。==这种刷写是RegionServer级别的刷写。此级别的刷写，所有请求此RegionServer的操作都会阻塞！！
+
+
+
+#### 3、WAL Log文件达到上限
+
