@@ -121,7 +121,7 @@
 
 
 
-# Scala语言学习
+# Scala基础语言学习
 
 
 
@@ -624,6 +624,206 @@ for (i <- 1 to 10) {
 ```
 
 当i的for循环中有业务逻辑，就会出现问题，还是要使用传统的循环。
+
+
+
+> For循环 yield暂存
+
+```scala
+object ForDemo06 {
+  def main(args: Array[String]): Unit = {
+    var numbers = for (i <- 1 to 10) yield {
+      if (i % 2 == 0) 0 else math.pow(i, 2).toInt
+    }
+    println(numbers)
+
+    /**
+     * Vector(1, 0, 9, 0, 25, 0, 49, 0, 81, 0)
+     */
+  }
+}
+```
+
+
+
+==for循环中的`()`可以使用`{}`替换==
+
+> for循环，步长控制`Range(m,n,x)` m到n,步长为x
+
+```scala
+object ForDemo07 {
+  def main(args: Array[String]): Unit = {
+    for (i <- Range(1,10,2)){
+      println(i)
+    }
+   	/**
+     * 1
+     * 3
+     * 5
+     * 7
+     * 9
+     */
+  }
+}
+```
+
+ 
+
+==Scala的设计者不推荐使用While循环，因为While循环是没有返回值的，不像for循环可以将循环中计算的结果返回出来直接使用，而While想要达到等同的效果就要在循环外额外定义变量，并在循环中修改。其作者认为循环内不应该影响的外部的变量，所以推荐使用for!例如递归的思想==
+
+ 
+
+
+
+> Breakable 循环中断
+
+```scala
+// 需要手动导入此包！！
+import util.control.Breaks._
+
+object Breakable {
+  def main(args: Array[String]): Unit = {
+    var n = 1;
+    while (n < 20) {
+      if (n == 15) {
+        break()
+      }
+      println(n)
+      n += 1
+    }
+    println("hello world")
+  }
+}
+```
+
+以上这种写法，执行break()后，程序会异常中断，后面的代码无法执行。我们需要使用`breakable`来包裹代码，来处理中断异常：
+
+```scala
+object Breakable {
+  def main(args: Array[String]): Unit = {
+    var n = 1;
+    breakable {
+      while (n < 20) {
+        if (n == 15) {
+          break()
+        }
+        println(n)
+        n += 1
+      }
+    }
+    println("hello world")
+  }
+}
+```
+
+使用breakable包裹后的代码，能够处理中断异常，并且不影响后续的代码执行。其实==breakable是一个高阶函数==
+
+==scala中去除了break和continue!!==
+
+
+
+# Scala函数式编程学习
+
+## Chap05.函数编程入门
+
+==scala中，将函数式编程和面向对象编程融为了一体==
+
+> 函数function 和 方法method
+
+**几乎**可以等同，定义、使用、运行机制都是一样的。函数的使用更加灵活，方法也可以轻松转化为函数！
+
+```scala
+package com.sakura.chapter05
+
+/**
+ * @author 5akura
+ * @create 2020/2020/8/14 20:28
+ * @description
+ **/
+object MethodAndFunction {
+  def main(args: Array[String]): Unit = {
+    var calculator = new Calculator
+    // 方法的调用
+    println("calculator.add(1, 2) = " + calculator.add(1, 2)) // 3
+
+    // 方法转函数
+    val function1 = calculator.add _
+    // 函数的调用
+    println("function1(2,3) = " + function1(2, 3)) // 5
+
+    // 函数的定义
+    val function2 = (num1: Int, num2: Int) => {
+      // 函数体
+      num1 + num2
+    }
+    // 函数的使用
+    println("function2(3,4) = " + function2(3, 4))
+
+  }
+}
+
+class Calculator {
+
+  /**
+   * 类的一个方法
+   *
+   * @param num1
+   * @param num2
+   * @return
+   */
+  def add(num1: Int, num2: Int): Int = {
+    num1 + num2
+  }
+}
+```
+
+
+
+> 函数的定义
+
+```scala
+def 函数名(参数1:参数类型,参数2:参数类型,...)[:返回值类型 = ]{
+    /* 函数体 */
+    [return] 返回值
+}
+```
+
+中间有连个部分需要注意：
+
+- 函数的返回类型，有三种写法
+  1. `:返回值类型=`, 固定了返回值类型。
+  2. `=`,直接使用等于, 返回值类型自动推断==不可以使用return！！==
+  3. 什么都不写, 表示没有返回值
+- 函数体的返回值（在函数要求有返回值的情况下：）
+  - 使用return 则返回指定的值
+  - 不使用return 默认使用函数体中执行的最后一行代码的结果作为返回值！
+  - 如果函数不要求返回值，使用return也是白瞎
+
+**案例演示**
+
+```scala
+def calculate(operand1: Int, operand2: Int, operator: Char) = {
+    if (operator == '+') {
+      operand1 + operand2
+    } else if (operator == '-') {
+      operand1 - operand2
+    } else if (operator == '*') {
+      operand1 * operand2
+    } else if (operator == '/') {
+      if (operand2 == 0) {
+        null
+      } else {
+        operand1 / operand2
+      }
+    } else {
+      null
+    }
+  }
+```
+
+ 
+
+> 函数的使用注意
 
 
 

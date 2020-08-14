@@ -111,7 +111,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
 
 [HBase-1.3.6下载地址](https://www.apache.org/dyn/closer.lua/hbase/hbase-1.3.6/hbase-1.3.6-bin.tar.gz)
 
-> 配置修改 
+> 配置修改
 
 1. 解压后，进入conf目录，修改配置文件
 
@@ -124,7 +124,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
    export JAVA_HOME=/opt/module/jdk1.8.0_251
    ```
 
-    
+
 
    可选配置：这两行配置可以直接注释掉
 
@@ -134,7 +134,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
    export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS -XX:PermSize=128m -XX:MaxPermSize=128m -XX:ReservedCodeCacheSize=256m"
    ```
 
-    
+
 
    配置Zookeeper，默认是true,使用内置的Zookeeper。推荐设置为true，设置使用本地的Zookeeper
 
@@ -150,7 +150,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
    ````xml
    <?xml version="1.0"?>
    <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-   
+
    <configuration>
      <!-- Zookeeper的集群主机，默认端口不用写 -->
      <property>
@@ -159,7 +159,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
          <description>The directory shared by RegionServers.
          </description>
      </property>
-   
+
      <!-- Zookeeper的dataDir，在zoo.cfg中配置的  -->
      <property>
          <name>hbase.zookeeper.property.dataDir</name>
@@ -168,7 +168,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
              The directory where the snapshot is stored.
          </description>
      </property>
-   
+
      <!-- hbase在hdfs上的工作目录 -->
      <property>
          <name>hbase.rootdir</name>
@@ -176,7 +176,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
          <description>The directory shared by RegionServers.
          </description>
      </property>
-   
+
      <!-- 是否开启集群模式，true:集群模式 false：单机模式 -->
      <property>
          <name>hbase.cluster.distributed</name>
@@ -186,7 +186,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
              true: fully-distributed with unmanaged ZooKeeper Quorum (see hbase-env.sh)
          </description>
      </property>
-       
+
      <!-- master端口，默认16000 -->
      <property>
          <name>hbase.master.port</name>
@@ -195,7 +195,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
    </configuration>
    ````
 
-    
+
 
 4. 群起HBase的文件：regionservers
 
@@ -207,13 +207,13 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
    hadoop104
    ```
 
-    
+
 
 5. 创建Hadoop的core-site.xml、hdfs-site.xml软连接到此配置目录下
 
    ```shell
    ln -s /opt/module/hadoop-2.7.7/etc/hadoop/core-site.xml /opt/module/hbase-1.3.6/conf/core-site.xml
-   
+
    ln -s /opt/module/hadoop-2.7.7/etc/hadoop/hdfs-site.xml /opt/module/hbase-1.3.6/conf/hdfs-site.xml
    ```
 
@@ -237,14 +237,14 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
    访问hadoop102:16010，进入master的web页面
    ![image-20200812145150217](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200812145150.png)
 
-   
+
 
    `hbase-daemon.sh start regionserver`启动regionserver。jps查看出现**HRegionServer进程**
 
    ![image-20200812145413947](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200812145414.png)
 
    ==注意！！一定要先启动HDFS和Zookeeper！！==
-   
+
 3. 关闭单节点的HRegionServer和HMaster进程，群起RegionServer
 
    `bin/start-hbase.sh`群起HMaster、HRegionServer
@@ -299,14 +299,14 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
 
    `create 't1','infoA','infoB'` 创建t1表，含有infoA、infoB两个列族
 
-    
+
 
 2. 查看表
 
    可以通过web页面查看：
    ![image-20200812161005720](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200812161005.png)
 
-    
+
 
    也可以通过命令行查看：
 
@@ -317,7 +317,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
      TABLE                                                                                                                                                              
      t1                                                                                                                                                                  
      1 row(s) in 0.0110 seconds
-     
+
      => ["t1"]
      ```
 
@@ -332,11 +332,11 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
      ESSION => 'NONE', MIN_VERSIONS => '0', BLOCKCACHE => 'true', BLOCKSIZE => '65536', REPLICATION_SCOPE => '0'}                                                        
      {NAME => 'infoB', BLOOMFILTER => 'ROW', VERSIONS => '1', IN_MEMORY => 'false', KEEP_DELETED_CELLS => 'FALSE', DATA_BLOCK_ENCODING => 'NONE', TTL => 'FOREVER', COMPR
      ESSION => 'NONE', MIN_VERSIONS => '0', BLOCKCACHE => 'true', BLOCKSIZE => '65536', REPLICATION_SCOPE => '0'}
-     
+
      2 row(s) in 0.0480 seconds
      ```
 
-      
+
 
 3. 修改表（修改列族）
 
@@ -345,9 +345,9 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
    将VERSIONS从默认值1，改为3。
 
    这里的VERSIONS表示为，列族中列能保存的最大版本数。每一次修改都会产生一个新的版本。
-   ==注意由于一个表中有多个列族，所以修改的时候要使用{NAME=>'xx'}来唯一指定列族，后接修改的内容== 
+   ==注意由于一个表中有多个列族，所以修改的时候要使用{NAME=>'xx'}来唯一指定列族，后接修改的内容==
 
-   
+
 
 4. 删除表
 
@@ -389,7 +389,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
 
    ![image-20200812163951995](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200812163952.png)
 
-    
+
 
 4. 删除命名空间
 
@@ -427,7 +427,7 @@ hbase(main):020:0> put 'stu','1002','scores:ds','88'
 ...
  ```
 
- 
+
 
 > 查询数据
 
@@ -502,7 +502,7 @@ COLUMN                               CELL
 
 ![image-20200813101728980](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813101729.png)
 
- 
+
 
 > 删除数据
 
@@ -559,7 +559,7 @@ delete 'stu','1002','info:sex'
 
 ![image-20200813111023815](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813111023.png)
 
-  
+
 
 当我们使用`get '表名','row_key,{COLUME='列族:列名',VERSIONS=n}`查看某个数据的最近n个版本的时候，结果却是：
 
@@ -569,7 +569,7 @@ delete 'stu','1002','info:sex'
 
 `alter 'stu',{NAME=>'info',VERSIONS=>3}`，再次尝试：
 
-![image-20200813111738312](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813111738.png) 
+![image-20200813111738312](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813111738.png)
 
 继续修改，版本继续增加，但是只保留最新的3个。
 
@@ -616,7 +616,7 @@ delete 'stu','1002','info:sex'
 
    ![image-20200813141042495](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813141042.png)
 
-   
+
 
 2. 获取到meta表的位置后，到对应的RegionServer上扫描meta表的数据。找到要写数据的目标表的位置信息
 
@@ -675,7 +675,7 @@ delete 'stu','1002','info:sex'
 
    ![image-20200813154545439](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813154545.png)
 
-    
+
 
 6. 释放锁，等其他一些资源释放操作
 
@@ -706,7 +706,7 @@ delete 'stu','1002','info:sex'
 
 1. 单个MemStore内存占用达到配置值（`hbase.hregion.memstore.flush.size`）时
 2. 全局所有MemStore内存占用的达到配置值（`hbase.regionserver.global.memstore.upperLimit（旧版本）`，`hbase.regionserver.global.memstore.size (新版本)`）时
-3. 当WAL log文件的数量达到配置值（`hbase.regionserver.max.logs`）时，保存着最老的WAL Log文件的MemStore最先刷写。
+3. 当WAL log文件的数量达到配置值（`hbase.regionserver.max.logs`）时，保存着最老的WAL Log文件的RegionServer最先刷写。
 
 除此以外，还有三种：
 
@@ -722,7 +722,7 @@ delete 'stu','1002','info:sex'
 
 当MemStore的刷写速度比MemStore的写入速度慢的时候，MemStore会不断增长，增加刷写的负担并且随时可能OOME(内存溢出)，所以当MemStore内存占用达到（`hbase.hregion.memstore.flush.size * hbase.hregion.memstore.block.multiplier` ）`hbase.hregion.memstore.block.multiplier`默认值4，即 128MB*4=**512MB**时，会强制叫停对该Store的数据写入！！此时继续请求写入会报`RegionTooBusyException`异常。
 
- 
+
 
 #### 2、RegionServer的MemStore内存总和达到上限
 
@@ -730,9 +730,9 @@ delete 'stu','1002','info:sex'
 
 ![image-20200813194635406](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200813194635.png)
 
- 
 
-意思是说，这个配置项的值与其所在的RegionServer所占用的堆内存大小有关，**默认按照40%分配**。即RegionServer会将自己占用内存的40%分配给MemStore，但是决定不可能让你用满这40%的堆内存，于是就有了这个配置项`hbase.regionserver.global.memstore.size.lower.limit` 替代的旧版的~~`hbase.regionserver.global.memstore.lowerLimit`~~
+
+意思是说，这个配置项的值与其所在的RegionServer所占用的堆内存大小有关，**默认按照40%分配**。即RegionServer会将自己占用内存（hbase_heapsize）的40%分配给MemStore，但是绝对不可能让你用满这40%的堆内存，于是就有了这个配置项`hbase.regionserver.global.memstore.size.lower.limit` 替代的旧版的~~`hbase.regionserver.global.memstore.lowerLimit`~~
 
 此项的默认配置为**95%**，对这项的描述是**当分配给MemStore的内存使用占比达到该值，就会启动强制刷新。**例如当前RegionServer堆内存占用是2G，那么RegionServer中所有MemStore的内存占用达到 2×40%×95%=0.76G的时候，就会开始顺序强制刷写MemStore。
 
@@ -744,3 +744,312 @@ delete 'stu','1002','info:sex'
 
 #### 3、WAL Log文件达到上限
 
+首先我们清楚，WAL(HLog)是一个RegionServer维护一个，数据到达HBase都是先进WAL，然后到MemStore，最后才刷写到磁盘。虽然WAL是用来做容灾的，但是如果这个文件太大个数太多，就意味着MemStore中有大量的数据没有被持久化，那么一旦宕机故障，恢复的时候所用时就会很长。所以当WAL文件的数量达到一定阈值，有必要进行刷写来减少WAL文件的数量。
+
+这个数量的由`hbase.regionserver.max.logs`决定。官方文档中并没有对此配置给出说明。博客中给出了参数说明：
+
+如果设置了 hbase.regionserver.maxlogs，那就是这个参数的值；否则是
+max(32, hbase_heapsize * hbase.regionserver.global.memstore.size * 2 / logRollSize)。如果某个 RegionServer 的 WAL 数量大于 maxLogs 就会触发 MemStore 的刷写。
+
+**刷写的策略是，找到最老的WAL文件所在的RegionServer，然后刷写其所有Region中的所有MemStore！直到WAL个数低于max.logs**
+
+
+
+#### 4、数据长时间未更新自动刷写
+
+当数据既没有达到内存使用上限，也没有达到WAL文件数量上限，那么就不刷写了？当然不是！当你的数据长时间未更新的时候就会自动刷写。这个时间的长度由`hbase.regionserver.optionalcacheflushinterval (默认 3600000ms=3600s=1h，设置为0表示禁用)`配置控制。HBase会专门启动一个线程每隔`hbase.server.thread.wakefrequency（默认 10000ms=10s）`去检查有没有超过自动刷新时间的Region。
+
+即检查线程没10秒检查一次RegionServer中有没有超过1个小时没有更新数据和刷写的Region。
+
+-----
+
+
+
+## 3.4、读数据
+
+和写流程一样，只不多在从RegionServer读取数据的过程需要把握。
+
+1. 到Zookeeper请求meta表的位置
+2. 扫描meta表，取出要查询表的所在位置
+3. 到目标表的RegionServer上请求get数据
+
+> 这里Get数据的位置有三个：
+
+- StoreFile(HFile) 文件
+- MemStore 内存
+- BlockCache 文件内容缓存
+
+==并不是传统中从内存或者缓存中读到数据就忽略磁盘了！！==因为HBase数据的特殊性，数据再修改后旧版本的数据不会被立即删除，按照时间戳来决定数据版本。如果按照传统的读取方式，就很有可能漏读磁盘中最新数据，从而将内存中旧版的数据作为有效数据。
+
+==正确的读取方式，应该是每次都连带着磁盘（HFile）和内存（MemStore）以及缓存（BlockCache）一起读，通过时间戳的比较对数据进行一次Merge,然后拿到最新数据。==并将磁盘中读出的新数据写到BlockCache，下次读取磁盘的时候，BlockCache中已经缓存的文件不再读取。并且**BlockCache遵从LRU（最久未使用）算法淘汰机制。**
+这（每次都要读磁盘）就是为什么HBase的读数据要比写数据慢的原因了。
+
+
+
+> 解析HFile
+
+在HDFS中，在你所配置HBase的文件存放目录(我的配置 /hbase)，那么在`/hbase/data/命名空间/表名/RegionID/列族名/`目录下就是所有的HFile。官方提供了工具供我们解析HFile文件。
+
+![image-20200814103732023](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200814103732.png)
+
+解析结果：
+
+![image-20200814104149731](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200814104149.png)
+
+
+
+
+
+## 3.5、StoreFile Compaction
+
+当我们的StoreFile达到一定数量或者每间隔一段时间，就会触发Compaction，即将多个HFile合并为一个HFile。合并方式分为：
+`Minor Compaction` 和 `Major Compaction`
+
+首先来看相关的配置：
+
+- `hbase.hstore.compaction.min` 默认值none,代码逻辑中为3，取代了旧版本中的~~`hbase.hstore.compactionThreshold`~~
+
+  这个是触发Minor Compaction的最小HFile数量。（旧版本中配置值为3）
+
+- `hbase.hstore.compaction.max` 默认值10，单次MinorCompaction能够合并的最大HFile数量
+
+- `hbase.hregion.majorcompaction` 默认值604800000ms = 7Day 进行Major Compaction的时间间隔。生产环境一般设置为0，禁用自动MajorCompaction，因为十分占用资源。在空闲时间手动开启
+
+- `hbase.regionserver .compaction.enabled`默认true 是否启用Compaction。
+
+其他信息可以查看官方文档**71.7.7. Compaction**
+
+> MinorCompaction 和 Major Compaction的区别
+
+先看官方文档的这几段话吧：
+
+![image-20200814112726359](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200814112726.png)
+
+**Minor Compaction是会选择相邻的，少量的小文件进行合并，并且是不会对数据进行操作的，仅仅只是合并而已。**
+
+**而MajorCompaction，是将每个Store中的所有StoreFile合并为一个！并且对数据进行合并，删除过期的数据，保留有效数据。如果VERSIONS的设置大于1，则会将超额的版本删除。**
+
+> 合并 和 数据删除的关系
+
+数据删除操作，事实上并没有将数据移除。而是为这个数据做了一个“墓碑”作为标记。以确保查询请求的结果不会输出带有此标记的数据。然而在进行MajorCompaction的时候，就会真正将数据删除，并移除标记。如果文件中有过期数据，不会创建标记，而是在合并重写StoreFile时，直接过滤不写入新的StoreFile中！！
+
+
+
+> 命令行操作
+
+当前我们已经强制刷写(flush)了三个StoreFile:
+
+![image-20200814123129281](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200814123129.png)
+
+其内容分别为：
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200814123354.png" alt="image-20200814123354132" style="zoom:67%;" />
+
+现在我们可以使用`compact`进行minor compact，或者`major_compact`进行major compact
+
+先尝试minor compact：
+
+执行后会，生成一个新的StoreFile，是由原先的数据重写得到的。短暂延迟后会删除之前的StoreFile。。。
+
+![image-20200814123904081](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200814123904.png)
+
+发现最后其合并后，只保留了三个版本的数据。相当于就是执行了MajorCompact。。。（是因为那些文件合并的大小太小了，而且文件数量太少。。）
+
+![image-20200814123848683](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200814123848.png)
+
+
+
+当前我们有了12个StoreFile: 依次存放的是 “xiaohua1”~ "xiaohua11"
+![image-20200814124707499](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200814124707.png)
+
+我们再使用`compact`，合并后短暂延迟，剩下了几个文件，说明执行的是minor compact：
+![image-20200814125209541](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200814125209.png)
+
+
+
+然后我们使用`major_compact`，就能让这些所有的StoreFile合并为一！！
+![image-20200814125407246](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200814125407.png)
+
+最终文件中只留下了，最新的三个版本：
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200814125449.png" alt="image-20200814125449170" style="zoom:67%;" />
+
+
+
+
+
+## 3.6、读写扩展
+
+根据对读写流程的了解，发现全程都没有Master的出现，客户端始终只是与RegionServer和Zookeeper进行通信，因为Zookeeper上就存放了RegionServer的一些信息，以及集群的元数据。Client就不需要和Master进行交互，而是直接通过Zookeeper进行信息交换。
+
+==所以即使Master进程挂掉，也不影响Client的数据读写！！==
+但是当涉及到命名空间、Region、ColumnFamily的创建的的时候，没有Master是无法进行的！！
+并且当数据增长到一定的量时，需要拆分Region调度到不同的RegionServer上，没有Master也是不行的哦！！
+
+
+
+## 3.7、Region Split
+
+当某个Region的StoreFile的总和达到了阈值，需要将一个Region**一分为二**！！
+
+![image-20200814133421397](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200814133421.png)
+
+这是0.95版本前的策略。0.95版本后的策略是，每当StoreFile的大小达到了：
+
+`min(RegionNum^2 * hbase.hregion.memstore.flush.size, hbase,hregion.max.filesize)`的时候，就会进行一次拆分。
+
+- RegionNum表示Region的数量
+- hbase.hregion.memstore.flush.size = 128MB
+- hbase,hregion.max.filesize = 10G
+
+那么初始创建的Region，当StoreFile达到 1^2 * 128 = 128M是切分为两个64MB的Region，
+然后两个64MB的Region要 2^2 * 128 = 512MB 的时候切分为两个256MB的数据，…这样的切分方式在数据分布不均匀的时候容易造成数据倾斜！！
+
+> 由于Region切分的缘故，所以列族也要进行切分，所以官方不建议使用多个列族，原因就是在Flush的时候由于是针对Region，可能会成倍生成小文件。但是据说现在引入了以Store为单位的刷写，那么就可以解决这个问题了。
+
+
+
+# 四、HBase API
+
+## 4.1、项目创建 依赖导入
+
+Maven依赖：
+
+```xml
+<dependency>
+    <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-client</artifactId>
+    <version>1.3.6</version>
+</dependency>
+
+<dependency>
+    <groupId>org.apache.hbase</groupId>
+    <artifactId>hbase-server</artifactId>
+    <version>1.3.6</version>
+</dependency>
+```
+
+
+
+## 4.2、DDL API
+
+**官方文档的Chapter100,有API案例！！**尽量使用新的API！！！
+
+### 4.2.1、获取HBase的Client(Admin对象)
+
+```java
+private static Admin admin;
+private static Connection connection;
+private static Configuration conf;
+
+static {
+    try {
+        conf = HBaseConfiguration.create();
+        conf.set("hbase.zookeeper.quorum", "hadoop102,hadoop103,hadoop104");
+
+        connection = ConnectionFactory.createConnection(conf);
+        admin = connection.getAdmin();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+```
+
+
+
+### 4.2.2、表操作
+
+> 表是否存在
+
+```java
+public static boolean isTableExist(String tableName) {
+    try {
+        boolean exists = admin.tableExists(TableName.valueOf(tableName));
+        return exists;
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+    return false;
+}
+```
+
+
+
+> 创建表
+
+```java
+public static void createTable(String tableName, String... columnFamilies) {
+
+    // 检查表是否存在
+    if (isTableExist(tableName)) {
+        System.out.println(tableName + "已经存在");
+        return;
+    }
+    // 检查列族数量是否合乎要求
+    if (columnFamilies.length <= 0) {
+        System.out.println("请给出有效的列族");
+        return;
+    }
+
+    // 创建表描述器
+    HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(tableName));
+
+    // 为表添加列族
+    for (String columnFamily : columnFamilies) {
+        // 创建列族描述器
+        HColumnDescriptor columnDescriptor = new HColumnDescriptor(columnFamily);
+        // 添加列族
+        tableDescriptor.addFamily(columnDescriptor);
+    }
+
+    // 创建表
+    try {
+        admin.createTable(tableDescriptor);
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+```
+
+
+
+> 删除表
+
+```java
+public static void deleteTable(String tableName) {
+    try {
+        // 下线表
+        admin.disableTable(TableName.valueOf(tableName));
+        // 删除表
+        admin.deleteTable(TableName.valueOf(tableName));
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+```
+
+
+
+
+
+> 创建命名空间
+
+```java
+public static void createNamespace(String namespace) {
+    // new NamespaceDescriptor(); 构造器私有，不能直接new,要用静态内部类Builder创建
+    NamespaceDescriptor.Builder builder = NamespaceDescriptor.create(namespace);
+    // Build对象调用build方法，内部调用私有的构造器进行创建
+    NamespaceDescriptor namespaceDescriptor = builder.build();
+
+    try {
+        admin.createNamespace(namespaceDescriptor);
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+```
+
+在对应的命名空间里面建表，操作和命令行一样，只要在表名中标出命名空间即可。。
+
+
+
+## 4.3、DML

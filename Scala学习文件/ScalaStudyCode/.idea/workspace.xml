@@ -32,11 +32,8 @@
   <component name="ChangeListManager">
     <list default="true" id="9b90fa23-0d06-4192-a8c9-95cd7d391dac" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/../../HBase学习文件/HBase学习笔记.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../HBase学习文件/HBase学习笔记.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../Hadoop学习文件/Hadoop之HDFS.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../Hadoop学习文件/Hadoop之HDFS.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/scala/com/sakura/chapter02/Variable.scala" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/scala/com/sakura/chapter02/Variable.scala" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Scala学习笔记.md" beforeDir="false" afterPath="$PROJECT_DIR$/../Scala学习笔记.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../常用端口合集.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../常用端口合集.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -102,9 +99,9 @@
     <property name="scala_project_settings_configurable.last_selected_tab_index" value="7" />
     <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
   </component>
-  <component name="RunManager" selected="Application.ForDemo05">
-    <configuration name="ForDemo" type="Application" factoryName="Application" temporary="true">
-      <option name="MAIN_CLASS_NAME" value="com.sakura.chapter04.ForDemo" />
+  <component name="RunManager" selected="Application.FibonacciTest">
+    <configuration name="Breakable" type="Application" factoryName="Application" temporary="true">
+      <option name="MAIN_CLASS_NAME" value="com.sakura.chapter04.Breakable" />
       <module name="scalastudy" />
       <extension name="coverage">
         <pattern>
@@ -116,8 +113,21 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="ForDemo02" type="Application" factoryName="Application" temporary="true">
-      <option name="MAIN_CLASS_NAME" value="com.sakura.chapter04.ForDemo02" />
+    <configuration name="FibonacciTest" type="Application" factoryName="Application" temporary="true">
+      <option name="MAIN_CLASS_NAME" value="com.sakura.chapter05.FibonacciTest" />
+      <module name="scalastudy" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.sakura.chapter05.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ForDemo07" type="Application" factoryName="Application" temporary="true">
+      <option name="MAIN_CLASS_NAME" value="com.sakura.chapter04.ForDemo07" />
       <module name="scalastudy" />
       <extension name="coverage">
         <pattern>
@@ -129,12 +139,12 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="ForDemo03" type="Application" factoryName="Application" temporary="true">
-      <option name="MAIN_CLASS_NAME" value="com.sakura.chapter04.ForDemo03" />
+    <configuration name="FuncDemo01" type="Application" factoryName="Application" temporary="true">
+      <option name="MAIN_CLASS_NAME" value="com.sakura.chapter05.FuncDemo01" />
       <module name="scalastudy" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.sakura.chapter04.*" />
+          <option name="PATTERN" value="com.sakura.chapter05.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -142,25 +152,12 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="ForDemo04" type="Application" factoryName="Application" temporary="true">
-      <option name="MAIN_CLASS_NAME" value="com.sakura.chapter04.ForDemo04" />
+    <configuration name="MethodAndFunction" type="Application" factoryName="Application" temporary="true">
+      <option name="MAIN_CLASS_NAME" value="com.sakura.chapter05.MethodAndFunction" />
       <module name="scalastudy" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.sakura.chapter04.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="ForDemo05" type="Application" factoryName="Application" temporary="true">
-      <option name="MAIN_CLASS_NAME" value="com.sakura.chapter04.ForDemo05" />
-      <module name="scalastudy" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.sakura.chapter04.*" />
+          <option name="PATTERN" value="com.sakura.chapter05.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -170,11 +167,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Application.ForDemo05" />
-        <item itemvalue="Application.ForDemo04" />
-        <item itemvalue="Application.ForDemo03" />
-        <item itemvalue="Application.ForDemo02" />
-        <item itemvalue="Application.ForDemo" />
+        <item itemvalue="Application.FibonacciTest" />
+        <item itemvalue="Application.FuncDemo01" />
+        <item itemvalue="Application.MethodAndFunction" />
+        <item itemvalue="Application.Breakable" />
+        <item itemvalue="Application.ForDemo07" />
       </list>
     </recent_temporary>
   </component>
@@ -193,6 +190,8 @@
       <workItem from="1597301076961" duration="50000" />
       <workItem from="1597306243544" duration="873000" />
       <workItem from="1597320990551" duration="7939000" />
+      <workItem from="1597394420398" duration="15000" />
+      <workItem from="1597401701911" duration="11044000" />
     </task>
     <servers />
   </component>
@@ -248,22 +247,22 @@
       <screen x="63" y="0" width="1540" height="902" />
     </state>
     <state x="228" y="0" key="CommitChangelistDialog2/63.0.1540.902@63.0.1540.902" timestamp="1597154063368" />
-    <state width="1481" height="374" key="GridCell.Tab.0.bottom" timestamp="1597331232012">
+    <state width="1481" height="350" key="GridCell.Tab.0.bottom" timestamp="1597416536958">
       <screen x="63" y="0" width="1540" height="902" />
     </state>
-    <state width="1481" height="374" key="GridCell.Tab.0.bottom/63.0.1540.902@63.0.1540.902" timestamp="1597331232012" />
-    <state width="1481" height="374" key="GridCell.Tab.0.center" timestamp="1597331232012">
+    <state width="1481" height="350" key="GridCell.Tab.0.bottom/63.0.1540.902@63.0.1540.902" timestamp="1597416536958" />
+    <state width="1481" height="350" key="GridCell.Tab.0.center" timestamp="1597416536958">
       <screen x="63" y="0" width="1540" height="902" />
     </state>
-    <state width="1481" height="374" key="GridCell.Tab.0.center/63.0.1540.902@63.0.1540.902" timestamp="1597331232012" />
-    <state width="1481" height="374" key="GridCell.Tab.0.left" timestamp="1597331232012">
+    <state width="1481" height="350" key="GridCell.Tab.0.center/63.0.1540.902@63.0.1540.902" timestamp="1597416536958" />
+    <state width="1481" height="350" key="GridCell.Tab.0.left" timestamp="1597416536958">
       <screen x="63" y="0" width="1540" height="902" />
     </state>
-    <state width="1481" height="374" key="GridCell.Tab.0.left/63.0.1540.902@63.0.1540.902" timestamp="1597331232012" />
-    <state width="1481" height="374" key="GridCell.Tab.0.right" timestamp="1597331232012">
+    <state width="1481" height="350" key="GridCell.Tab.0.left/63.0.1540.902@63.0.1540.902" timestamp="1597416536958" />
+    <state width="1481" height="350" key="GridCell.Tab.0.right" timestamp="1597416536958">
       <screen x="63" y="0" width="1540" height="902" />
     </state>
-    <state width="1481" height="374" key="GridCell.Tab.0.right/63.0.1540.902@63.0.1540.902" timestamp="1597331232012" />
+    <state width="1481" height="350" key="GridCell.Tab.0.right/63.0.1540.902@63.0.1540.902" timestamp="1597416536958" />
     <state x="310" y="118" key="IDE.errors.dialog" timestamp="1597242467242">
       <screen x="63" y="0" width="1540" height="902" />
     </state>
