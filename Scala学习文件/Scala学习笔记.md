@@ -728,7 +728,7 @@ object Breakable {
 
 ==scala中，将函数式编程和面向对象编程融为了一体==
 
-> 函数function 和 方法method
+### 5.1、函数function 和 方法method
 
 **几乎**可以等同，定义、使用、运行机制都是一样的。函数的使用更加灵活，方法也可以轻松转化为函数！
 
@@ -779,7 +779,7 @@ class Calculator {
 
 
 
-> 函数的定义
+### 5.2、函数的定义
 
 ```scala
 def 函数名(参数1:参数类型,参数2:参数类型,...)[:返回值类型 = ]{
@@ -823,7 +823,202 @@ def calculate(operand1: Int, operand2: Int, operator: Char) = {
 
  
 
-> 函数的使用注意
+### 5.3、函数的使用注意
+
+- 单函数没有形参的时候，参数列表的括号可直接省略
+
+- 函数的参数、返回值可以是值类型，也可以是引用类型！(即当传入一个对象时，用的是对象的引用，直接操作源对象！)
+
+- Scala的语法中，任何的结构都可以嵌套其他所有结构：类中可以再定义类，函数中可以再定义函数！同名函数在不同的位置，编译后修饰符不同罢了：
+
+   ```scala
+  object FuncNotice02 {
+    def main(args: Array[String]): Unit = {
+  
+      def func(msg: String): Unit = { // private static final func$1
+        println(msg)
+        def func (msg:String): Unit = { // private static final func$2
+          println(msg)
+        }
+      }
+  
+    }
+  
+    def func(msg: String): Unit = {
+      println(msg)
+    }
+  }
+   ```
+
+  编译后的：
+
+  <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815203845.png" alt="image-20200815203845794" style="zoom:67%;" />
+
+  虽然三个位置的函数处于同等地位，都是此类的成员函数。
+  但是写在main方法中的函数变为了两个私有的静态不可变的函数，函数名分别加上了`$1、$2`
+  写在main方法外面的函数，成功成为了类的成员方法。
+
+  
+
+- 形参设置默认值！
+
+  函数的参数是可以设置默认值的，调用时不传参数的时候，使用默认值，但是没有设置默认值的参数仍需要传递参数
+
+  ```scala
+  object FuncNotice03 {
+    def main(args: Array[String]): Unit = {
+      sayHi() // Bob: Hello
+      sayHi("Sakura") // Sakura: Hello
+      // say() 报错，需要指定msg
+    }
+  
+    def sayHi(name:String = "Bob"): Unit = {
+      println(s"$name: Hello")
+    }
+    
+    def say(name:String = "Mike", msg:String): Unit ={
+      println(s"$name : $msg")
+    }
+  }
+  ```
+
+  对于上面的案例，如何为设置参数，请往下看
+
+  
+
+- 默认值覆盖顺序：
+
+  当参数中有很多默认值的时候，调用时传递的参数 **从左到右**依次覆盖默认值
+
+  ```scala
+  object FuncNotice04 {
+    def main(args: Array[String]): Unit = {
+      connectMysql() // localhost:3306 root 123456
+  
+      connectMysql("192.168.1.1",6666) // 192.168.1.1:6666 root 123456
+  
+      //如果我只想改用户名和密码呢？
+      //connectMysql("sakura","170312") ?因为是从左向右覆盖，，所以行不通 除非你把函数的后两个参数写到前面
+    }
+  
+    def connectMysql(host:String = "localhost", port:Int = 3306,
+                     username:String = "root", password:String = "123456"): Unit ={
+      println(s"$host:$port")
+      println(s"username: $username")
+      println(s"password: $password")
+    }
+  }
+  ```
+
+  如果遇到代码中的问题，多个默认参数我只想修改其中几个。
+  或者函数既有带默认值的参数，又有没有默认值的参数，怎么为不带默认值的参数设值？==带名参数就是救世主！==
+
+  
+
+- 带名参数（对应上面两个案例的问题）
+
+  ```scala
+  say(msg = "My name is mike!")
+  
+  connectMysql(username = "sakura",password = "170312")
+  // 在调用的时候，用参数名指定值
+  ```
+
+   
+
+- ==函数的形参都是 val定义的，是不容修改的！！==
+
+   
+
+- 递归在执行前无法自动推断返回值，所以==递归函数不能使用自动推断返回值类型，必须指定返回值类型！！！==
+
+- Scala函数支持可变参数（==可变形参放在最后！！==）
+
+  ```scala
+  object FuncNotice05 {
+    def main(args: Array[String]): Unit = {
+      println(sum()) // 0
+      println(sum(1, 3, 5, 7, 9)) // 25
+      println(sub(19)) // 19
+      println(sub(19, 1, 3, 5, 7)) //3
+      //    sub() 报错，缺少参数
+    }
+  
+    def sum(numbers:Int*): Int ={
+      var res:Int = 0
+      for (number <- numbers) {
+        res += number
+      }
+      res
+    }
+  
+    /**
+     *
+     * @param minuend 被减数(必须)
+     * @param nums 减数(可变)
+     * @return
+     */
+    def sub(minuend:Int, nums:Int*):Int ={
+      var res:Int = minuend
+      for (num <- nums){
+        res -= num
+      }
+      res
+    }
+  }
+  ```
+
+  可变形参，使用时是一个Sequence（序列）！！可以使用for来遍历！
+
+   
+
+- ==过程(Procedure)==：没有返回值，或者返回值为Unit的函数称之为过程！！
+
+----
+
+
+
+### 5.4、惰性函数
+
+==推迟计算，等到真正使用此函数的返回值的时候才临时开始执行函数。==联想单例模式中的懒汉式，在大数据场景中我们可以将一些不必要的计算放到用户需要的时候进行实时计算，在不必要的时候等待，以减少资源的浪费！
+
+使用`lazy`关键字
+
+```scala
+object LazyFunc {
+  def main(args: Array[String]): Unit = {
+    
+    lazy val res = sum(20,30)
+    println("--------")
+    println(res)
+
+    /**
+     * --------
+     * sum执行了。。。。
+     * 50
+     */
+  }
+
+  def sum(num1:Int,num2:Int) = {
+    println("sum执行了。。。。")
+    num1 + num2
+  }
+}
+```
+
+可以看到使用lazy定义了一个val变量res=sum(20,30); 但是并没有立即去执行sum函数，因为res变量被标记了懒加载（推迟赋值）。于是就往后执行，当输出的时候要用到res变量了，马上拎出来零时执行函数并赋值。==典型的不见棺材不掉泪==
+
+==注意：由于懒加载是将赋值推迟，那么定义变量只能是`val`类型，不允许中途变化！！==
+
+
+
+### 5.5、异常
+
+Java中的编译时异常和运行时异常，被Scala统一为运行时异常！！
+
+
+
+
 
 
 

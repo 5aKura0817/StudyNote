@@ -547,6 +547,10 @@ delete 'stu','1002','info:sex'
 
 ----
 
+==以上删除笔记不够严谨，请查看3.8 重新认识删除==
+
+
+
 
 
 ### 2.3.3、数据多版本（VERSIONS）
@@ -788,7 +792,7 @@ max(32, hbase_heapsize * hbase.regionserver.global.memstore.size * 2 / logRollSi
 
 > 解析HFile
 
-在HDFS中，在你所配置HBase的文件存放目录(我的配置 /hbase)，那么在`/hbase/data/命名空间/表名/RegionID/列族名/`目录下就是所有的HFile。官方提供了工具供我们解析HFile文件。
+在HDFS中，在你所配置HBase的文件存放目录(我的配置 /hbase)，那么在`/hbase/data/命名空间/表名/RegionID/列族名/`目录下就是所有的HFile。官方提供了工具供我们解析HFile文件。`bin/hbase org.apache.hadoop.hbase.io.hfile.Hfile`
 
 ![image-20200814103732023](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200814103732.png)
 
@@ -956,7 +960,7 @@ static {
 
 
 
-### 4.2.2、表操作
+### 4.2.2、常用操作
 
 > 表是否存在
 
@@ -1052,4 +1056,370 @@ public static void createNamespace(String namespace) {
 
 
 
-## 4.3、DML
+## 4.3、DML API
+
+### 4.3.1、向表中插入数据(PUT)
+
+从这里开始，我们不再使用admin对象来操作集群。而是先通过connection对象获取我们要操作的表，然后用表的具体方法来完成数据的操作。中间还需要将操作实例化为对应的对象，例如Put对象、Get对象
+
+```java
+public static void putData(String tableName, String row_key, String colFamily, String colQualifier, String value) throws IOException {
+    // 获取要插入数据的表
+    Table table = connection.getTable(TableName.valueOf(tableName));
+    // 创建Put 对象，并设置row_key
+    Put put = new Put(row_key.getBytes());
+
+    // 为Put对象，配置数据信息
+    put.addColumn(colFamily.getBytes(), colQualifier.getBytes(), value.getBytes());
+
+    // 表执行插入
+    table.put(put);
+    
+    // 关闭表
+    table.close();
+}
+```
+
+以上是单条数据的插入。也可以批量数据插入：
+
+- 单行多列数据插入：
+
+  put对象，每次addColumn表示对当前行的一列数据进行插入，多次addColumn即可实现单行多列数据批量插入
+
+- 多行单列：
+
+  每个Put对象，对应一行的数据插入操作，要操作多行就需要多个Put对象，Table的put方法支持接收List\<Put>,即可完成多行单列的数据插入
+
+- 多行多列
+
+  前两者的融合。。
+
+
+
+### 4.3.2、获取数据(GET)
+
+```java
+public static void getData(String tableName, String row_key, String colFamily, String colQualifier) throws IOException {
+    Table table = connection.getTable(TableName.valueOf(tableName));
+    // 获取Get对象
+    Get get = new Get(row_key.getBytes());
+
+    // 设置列族(和列) 不设置默认全列族全列
+    // get.addFamily(colFamily.getBytes()); //只设置列族
+    get.addColumn(colFamily.getBytes(), colQualifier.getBytes());
+
+    // 设置获取数据的版本数量 不得超过VERSIONS配置值,超过无效
+    get.setMaxVersions(); // 不设置默认值与列族的VERSIONS配置相同
+
+    Result result = table.get(get);
+
+    // 获取结果Cell 并遍历输出内容
+    List<Cell> cells = result.listCells();
+    for (Cell cell : cells) {
+        //Cell的 getValue等方法均已过时，推荐使用CellUtil的cloneValue()等方法
+        String value = new String(CellUtil.cloneValue(cell));
+        String col = new String(CellUtil.cloneQualifier(cell));
+        String family = new String(CellUtil.cloneFamily(cell));
+        System.out.println("ColFamily: " + family + ", "
+                           + "ColQualifier: " + col + ", "
+                           + "Value: " + value);
+    }
+    table.close();
+}
+```
+
+同样也是可以批量查询的，多列多行都可以，操作过程和Put数据一致。
+
+==注意对Cell的操作！==基本的get方法都已经过时，应换用`CellUtil`的cloneValue()等方法
+
+
+
+### 4.3.3、扫描表(scan)
+
+```java
+public static void scanTable(String tableName, String startRow, String stopRow) throws IOException {
+    Table table = connection.getTable(TableName.valueOf(tableName));
+    // 创建Scan对象 并设置扫描的起始位置，默认全表
+    Scan scan = new Scan(startRow.getBytes(), stopRow.getBytes());
+
+    //scan.addColumn("".getBytes(), "".getBytes()); 同样也可以指定列
+
+    // 获取扫描结果 ResultScanner对象(结果迭代器)
+    ResultScanner results = table.getScanner(scan);
+
+    for (Result result : results) {
+        List<Cell> cells = result.listCells();
+        for (Cell cell : cells) {
+            System.out.println("row_key:" + new String(CellUtil.cloneRow(cell)) + ", "
+                               + "col:" + new String(CellUtil.cloneQualifier(cell)) + ", "
+                               + "value:" + new String(CellUtil.cloneValue(cell)));
+        }
+    }
+    results.close();
+    table.close();
+}
+```
+
+不同于Get方式的获取数据，使用Scan扫描表，是跨行的。所以对于的扫描结果也就对应多个Result对象。但是并不是用Result数组来返回的，因为那样做当数据量很大的时候，结果全放在一个数组里面 极容易造成OOM。其使用的是一个类似于迭代器的东西，当输出数据的时候，直接到服务端拉取即可。
+
+
+
+### 4.3.4、删除数据
+
+在学习这个之前，我觉得我们有必要先来<a href="#review delete">重新认识一下HBase的数据删除！！</a>
+
+<a name="delete">欢迎回来！</a>
+
+首先Delete对象在设置列族和列的时候，和其他对象有点不同：
+
+![image-20200815165231043](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815165231.png)
+
+`addColumn`和`addColumns`，两个方法又分别有带时间戳和不带时间戳两种。
+
+> addColumn
+
+- 不带时间戳：删除指定列数据的最新版本数据
+
+  为了避免干扰，我们每次都清空一下表。。重新插入数据。
+
+  ```java
+  public static void deleteData(String tableName, String row_key, String colFamily, String colQualifier) throws IOException {
+      Table table = connection.getTable(TableName.valueOf(tableName));
+  
+      // 创建Delete对象 并指定操作的行
+      Delete delete = new Delete(row_key.getBytes());
+  
+      delete.addColumn(colFamily.getBytes(), colQualifier.getBytes());
+  
+      table.delete(delete);
+      table.close();
+  }
+  ```
+
+  执行结果
+  ![image-20200815165941429](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815165941.png)
+
+   
+
+- 加上时间戳
+
+  ```java
+  public static void deleteData(String tableName, String row_key, String colFamily, String colQualifier) throws IOException {
+      Table table = connection.getTable(TableName.valueOf(tableName));
+  
+      // 创建Delete对象 并指定操作的行
+      Delete delete = new Delete(row_key.getBytes());
+  
+      delete.addColumn(colFamily.getBytes(), colQualifier.getBytes(),1597482087810L);
+  
+      table.delete(delete);
+      table.close();
+  }
+  ```
+
+   执行结果：拉黑了一个时间戳，现有数据不受影响
+
+  ![image-20200815170324244](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815170324.png)
+
+所以此方法调用，==打的标记都是Delete!!==
+
+
+
+> addColumns
+
+- 不带时间戳
+
+  ```java
+  public static void deleteData(String tableName, String row_key, String colFamily, String colQualifier) throws IOException {
+      Table table = connection.getTable(TableName.valueOf(tableName));
+  
+      // 创建Delete对象 并指定操作的行
+      Delete delete = new Delete(row_key.getBytes());
+  
+      delete.addColumns(colFamily.getBytes(), colQualifier.getBytes());
+  
+      table.delete(delete);
+      table.close();
+  }
+  ```
+
+  ![image-20200815170640022](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815170640.png)
+
+  和注释所描述一样，删除所有版本的数据！！使用的标记是DeleteColumn！
+
+- 带时间戳
+
+  ```java
+  public static void deleteData(String tableName, String row_key, String colFamily, String colQualifier) throws IOException {
+      Table table = connection.getTable(TableName.valueOf(tableName));
+  
+      // 创建Delete对象 并指定操作的行
+      Delete delete = new Delete(row_key.getBytes());
+  
+      delete.addColumns(colFamily.getBytes(), colQualifier.getBytes(),1597482496670L);
+  
+      table.delete(delete);
+      table.close();
+  }
+  ```
+
+  ![image-20200815171004424](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815171004.png)
+
+  还是使用的DeleteColumn, 效果是什么样不用我多说了吧。。
+
+  所以使用此法删除==打的标记都是DeleteColumn！！==
+
+
+
+> 删除列族
+
+使用`addFamily()`方法，同样也可以时间戳，效果与addColumns一样。
+
+```java
+public static void deleteData(String tableName, String row_key, String colFamily, String colQualifier) throws IOException {
+    Table table = connection.getTable(TableName.valueOf(tableName));
+
+    // 创建Delete对象 并指定操作的行
+    Delete delete = new Delete(row_key.getBytes());
+
+    delete.addFamily(colFamily.getBytes());
+
+    table.delete(delete);
+    table.close();
+}
+```
+
+![image-20200815182414930](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815182415.png)
+
+使用的是`DeleteFamily`标记！！
+
+
+
+> 删除整行
+
+如果什么都不指定的话，直接创建Delete对象，然后table调用delete方法，则直接删除对应行。
+其过程就是**对所有ColumnFamily 加上DeleteFamily！！**
+
+```java
+public static void deleteData(String tableName, String row_key, String colFamily, String colQualifier) throws IOException {
+    Table table = connection.getTable(TableName.valueOf(tableName));
+
+    // 创建Delete对象 并指定操作的行
+    Delete delete = new Delete(row_key.getBytes());
+
+    table.delete(delete);
+    table.close();
+}
+```
+
+![image-20200815195213760](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815195213.png)
+
+
+
+
+
+## <a name="review delete">3.8、重新认识删除</a>
+
+### 3.8.1、什么时候数据会被真正删除？
+
+- ==Major Compact的时候会删除数据==
+- ==Flush的时候删除数据！==
+
+**那么他们分别是删除什么数据？**
+
+> Major Compact删除数据
+
+MinorCompact胆小,不会对数据内容参数影响。MajorCompact则不一样，将**一个Store**的所有HFile合并成一个，删除所有过期的数据，和被标记了删除的数据。删除方式就是，将所有HFile的内容读到内存中，挑选出需要保留的数据（多版本数据等），其他被标记或者过期的数据（时间戳太老，Version超额的）直接抛弃不写入到新的HFile中。
+
+所以这种操作是很耗费资源的，所以我们都会关闭其7天自动Compact的配置，改为手动执行。
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815141015.png" alt="image-20200815141014890" style="zoom:67%;" />
+
+ 
+
+> Flush删除数据
+
+Flush，是过程对象是MemStore到HFile，而且每次刷写都是一个全新的HFile。**删除的是内存中无用的数据**。
+
+那么哪些是无用的数据？由于MemStore在刷写数据的时候，不知情其他HFile中的数据，所以刷写是MemStore中没有持久化的数据，并剔除过期数据（只保留VERSIONS个数据版本。）和已经标记删除的数据，这里和Compaction是一样的处理方式，只不过它所能判断的**范围是当前MemStore中没有持久化的数据。**（即便另一个HFile中也有VERSIONS个版本的数据，但是MemStore不知道。）对于多个HFile中的版本舍取是MajorCompact的工作！！
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815142605.png" alt="image-20200815142605562" style="zoom:67%;" />
+
+==并且删除的标记，在Flush的时候是，不会删除的！因为删除标记可能对于已经持久到其他的HFile的数据起作用。==**是否有作用只有当MajorCompact的时候，所有的记录都见面了才知道。**
+
+
+
+==使用`scan 'xx',{RAW=>TRUE,VERSIONS=10}`其实看到的数据是MemStore、HFile(和BlockCache)的综合数据，千万不要误以为全是内存的数据，不信你使用`major compact`后，短暂延迟后所有的HFile归并，多余的数据就会消失，删除标记基本也会消失==
+
+----
+
+### 3.8.2、删除标记
+
+现在我们来谈谈关于的==删除的标记==，简简单单的删除操作，却有多种删除标记:
+
+- **Delete**
+- **DeleteFamily**
+- **DeleteColumn**
+
+![image-20200815153135677](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815153135.png)
+
+> 测试Delete
+
+我们现在清空这个表，分别对（1001，info:name）三次写入数据：aaa,bbb,ccc，最新的数据是ccc。（没有持久化到HFile）但是我们执行
+`delete 'stu','1001','info:name'`后，bbb出来了：
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815153803.png" alt="image-20200815153802925" style="zoom:67%;" />
+
+此时标记是Delete!! ==说明Delete标记只对单个时间戳有效。==假如我们现在向这个时间戳插入数据的话应该是无效的：
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815154147.png" alt="image-20200815154147431" style="zoom:67%;" />
+
+果不其然，相当于被打了Delete标记的时间戳被“拉黑了”。。
+
+当我们刷写并Compact后，删除标记和别标记删除的ddd就没了！！！也就进一步证实了Delete标记只能作用于单个时间戳！！
+
+
+
+> DeleteColumn
+
+再次清空表！还是插入三条数据，这次我们执行`deleteall 'stu','1001','info:name'`
+
+![image-20200815155328646](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815155328.png)
+
+此时所有的数据都没有了，道理和我们初次学习删除的时候一样。==DeleteColumn标记作用于一个列，时间戳小于此标记的数据都会视为无效数据==
+
+我们直接刷写数据，无效数据删除了，删除标记还在！
+![image-20200815155701859](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815155701.png)
+
+我们执行major compact，标记移除：
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815155816.png" alt="image-20200815155816134" style="zoom:67%;" />
+
+ 
+
+> DeleteFamily
+
+这个在命令行中使用`deleteall '表名','row_key'`的时候会出现，命令行删除列族不可用。。但是API中的删除列族可以，也会出现这个标记。
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815160503.png" alt="image-20200815160503398" style="zoom:67%;" />
+
+和DeleteColumn差不多，==它是作用于列族！！在此标记时间戳前所有向此列的此列族所有的插入数据都无效！！==
+
+![image-20200815160900110](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815160900.png)
+
+不出所料的话，现在刷写，所有的数据都会消失，只会留下删除标记：
+![image-20200815161130785](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200815161130.png)
+
+执行major_compact后，这些标记也就一并消失了。这里就不截图了。
+
+ 
+
+> 总结一下：
+
+- Delete标记：作用于一个时间戳（单条数据），即当前最新数据所在的时间戳！！不影响其他时间戳
+- DeleteColumn：作用于某行的一个列，所有小于此标记时间戳的列数据都视为过期无效数据！
+- DeleteFamily：作用于某行的一个列族，所有小于此标记时间轴的所有列族数据视为无效数据！
+- 
+
+在重新认识了HBase的后，我们再返回学习<a href="#delete">DML API中的Delete=></a>
+
+
+
