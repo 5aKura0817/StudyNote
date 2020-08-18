@@ -1423,3 +1423,490 @@ Flush，是过程对象是MemStore到HFile，而且每次刷写都是一个全�
 
 
 
+
+
+## 4.4、HBase API和MR交互
+
+既然是一个存储框架那么必然有他作用的位置，这些数据最终是要被拿去处理分析然后再存储的。现在我们让HBase和MR进行交互，这也是官方给出的案例！
+
+### 4.4.1、MR读取HBase的数据
+
+1. 使用`bin/hbase mapredcp`查看MR操作HBase所用的jar包
+
+2. 环境变量设置
+
+   /etc/profile：
+
+   ```shell
+   export HBASE_HOME=/opt/module/hbase-1.3.6
+   export HADOOP_HOME=/opt/module/hadoop-2.7.7
+   ```
+
+   修改Hadoop配置目录（/opt/module/hadoop-x.x.x/etc/hadoop）下的hadoop-env.sh：
+
+   ```shell
+   export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/opt/module/hbase-1.3.6/lib/*
+   ```
+
+   ![image-20200817110743596](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200817110743.png)（图中有误，末尾缺了个**/***）
+
+   就是将刚才我们看到的jar包让Hadoop能够扫描到！
+
+   配置完成后，重新加载环境变量，并分发修改的配置(hadoop-env.sh)！！
+
+3. 使用官方的案例并运行
+
+   启动HBase、Hadoop（HDFS、YARN）、ZK.
+   到HBase的根目录下，执行`/opt/module/hadoop-2.7.7/bin/yarn jar lib/hbase-server-1.3.6.jar rowcounter stu`
+   如果配置了Hadoop的环境变量可以简写。。。`yarn jar ...`。
+
+   这是一个统计表行数的案例。`rowcounter`是对应jar包中类的名字，stu则是HBase中我们要统计的表的名字！
+
+   ![image-20200817112705525](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200817112705.png)
+
+   结果查看：
+   ![image-20200817112747385](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200817112747.png)
+
+   结果验证：
+
+   ![image-20200817112839915](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200817112839.png)
+
+ 
+
+这是MR读取HBase的数据，那么肯定就可以MR计算结果写到HBase中去！！
+
+
+
+### 4.4.2、MR写入数据到HBase
+
+1. 首先准备好一个tsv文件fruit.tsv（即数据之间使用tab间隔的文件）并上传到HDFS上，便于后续使用
+
+   ```
+   1001	apple	red
+   1002	Orange	orange
+   1003	banana	yello
+   1004	grape	purple
+   ```
+
+2. 创建一个表，并带上列族
+
+   `create 'fruit','info'`
+
+3. 命令行执行：
+
+   `yarn jar lib/hbase-server-1.3.6.jar importtsv -Dimporttsv.columns=HBASE_ROW_KEY,info:name,info:color fruit hdfs://hadoop102:9000/fruit.tsv`
+
+   其中importtsv同样是案例测试的类名，后面的参数表示 将hdfs上的指定文件或目录中的数据按tsv格式解析为ROW_KEY、info:name、info:color三个列的数据，并导入到Hbase的fruit表中！！
+
+4. 执行结果：
+
+   ![image-20200817132905849](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200817132905.png)
+
+   HBase表数据：
+
+   ![image-20200817132958293](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200817132958.png)
+
+   OK!!
+
+----
+
+这样一来HBase就能够将数据提供给分析计算框架来处理了，并且也能接受到它们的数据写入！！
+
+
+
+### 4.4.3、自定义HBase-MapReduce（一）
+
+上面还只是官方的，我们自己从零开始编码实现一下
+
+Mapper：充当一个了传输数据的摆设。。
+
+```java
+public class MyMapper extends Mapper<LongWritable, Text, LongWritable, Text> {
+
+    /**
+     * 由于 Mapper中没有太多业务，我们直接略过直接写到Reducer即可
+     * @param key
+     * @param value
+     * @param context
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    @Override
+    protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+        context.write(key, value);
+    }
+}
+```
+
+ 
+
+Reducer:处理数据并写出
+
+```java
+public class MyReducer extends TableReducer<LongWritable, Text, NullWritable> {
+    @Override
+    protected void reduce(LongWritable key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+        // 遍历Reducer的组数据
+        for (Text value : values) {
+            // 开始解析每一行数据
+            String data = value.toString();
+            String[] fields = data.split("\t");
+
+            // 插入表，需要构建Put对象 并从读取的数据中取到row_key并设置
+            Put put = new Put(fields[0].getBytes());
+
+            // 为Put对象添加信息 列族信息和列信息是可以通过调用时传入的
+            put.addColumn("info".getBytes(), "name".getBytes(), fields[1].getBytes());
+            put.addColumn("info".getBytes(), "color".getBytes(), fields[2].getBytes());
+
+            context.write(NullWritable.get(), put);
+        }
+
+    }
+}
+```
+
+> **为什么使用继承`TableReducer`?**
+>
+> ==和传统MR不同，之前我们所写的MR数据都是导出到文件系统中的某个文件中。而这次我们需要将数据导入到HBase的表中==，这个抽象类就是HBase提供给我们使用MR与HBase交互的。
+>
+> **TableReducer和传统的Reducer有何不同？**
+>
+> ==TableReducer的ValueOut是固定的，即需要返回要求之内符合规范的值！==ValueOut就是操作表的东西，此时KeyOut已经不那么重要了。指定的ValueOut的是Mutation类（抽象类）。
+>
+> ![image-20200818095109401](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200818095109.png)
+>
+> **Mutation有哪些实现类？**
+>
+> <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200818095330.png" alt="image-20200818095330823" style="zoom:67%;" />
+>
+> 其中Put、Delete对象都是我们接触过的，那么也就是说我们==在Reducer端就已经将数据封装为了对表操作的对象！==
+>
+> **那么Driver中肯定就有一项设置表和一项设置读取文件的配置！！**
+
+
+
+Driver：
+
+```java
+public class MyDriver implements Tool {
+
+    private Configuration conf;
+
+    @Override
+    public int run(String[] args) throws Exception {
+        Job job = Job.getInstance(conf);
+
+        // 设置DriverClass
+        job.setJarByClass(MyDriver.class);
+        // Mapper Class设置
+        job.setMapperClass(MyMapper.class);
+
+        // Mapper端的输入与输出
+        job.setMapOutputKeyClass(LongWritable.class);
+        job.setMapOutputValueClass(Text.class);
+
+        // Reducer设置 表名,ReducerClass,job
+        TableMapReduceUtil.initTableReducerJob(args[0], MyReducer.class, job);
+
+        // 设置输入路径参数
+        FileInputFormat.addInputPath(job, new Path(args[1]));
+
+        // 任务提交
+        job.waitForCompletion(true);
+        return 0;
+    }
+
+    @Override
+    public void setConf(Configuration configuration) {
+        conf = configuration;
+    }
+
+    @Override
+    public Configuration getConf() {
+        return conf;
+    }
+
+    public static void main(String[] args) {
+        try {
+            // 运行任务
+            ToolRunner.run(new MyDriver(), args);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+注意代码中设置Reducer的方法不是和以前一样了，`TableMapReduceUtil.initTableReducerJob()`这里就需要设置表名，并设置Reducer（继承了TableReducer的）的类名，以及MR的一个Job实例。完美将HBase和MR打通！
+
+
+
+> 测试
+
+打包后上传到集群上，这里我们上传到HBase的lib目录下，准备开始运行：
+我们先将之前的使用的fruit的表清空！
+
+执行：`yarn jar lib/hbasestudy-1.0-SNAPSHOT.jar com.sakura.mr.MyDriver fruit /fruit.tsv`
+
+yarn jar不用说固定的，后面跟我们上传的jar包，然后就是运行的主类即MyDriver类，然后按照程序中缩写的顺序填写参数！==注意这里的文件位置还是HDFS上的文件位置！！==
+
+任务完成后，我们再次查看HBase中表的数据：完美复现：
+![image-20200818104418115](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200818104418.png)
+
+
+
+以上还只是最简单的实现，工作中还是要按照业务需求来完成!
+
+
+
+### 4.4.4、自定义HBase-MapReduce(二)
+
+上面都还只是MR和HBase单向交互，即从HBase取或者向HBase中写。现在实现终极目标：==从HBase中读取数据处理后写回到HBase中！！==
+
+mapper
+
+```java
+public class MyMapper extends TableMapper<ImmutableBytesWritable, Put> {
+
+    /**
+     * 对于逻辑表中每一行数据调用一次 map
+     * @param key 
+     * @param value
+     * @param context
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    @Override
+    protected void map(ImmutableBytesWritable key, Result value, Context context) throws IOException, InterruptedException {
+        Put put = new Put(key.get());
+        for (Cell cell : value.listCells()) {
+            // 取出name字段 并封装为Put对象
+            if ("name".equals(new String(CellUtil.cloneQualifier(cell)))) {
+                put.add(cell);
+            }
+        }
+        // 写出到Reducer
+        context.write(key, put);
+    }
+}
+```
+
+> 这里来一个`TableMapper`整好呼应我们之前的TableReducer，同样这个Mapper是HBase提供给我们从HBase中读取数据的！和普通Mapper不同，他固定了KeyIn和ValueIn，分别是`ImmutableBytesWritable`类, `Result`类。
+>
+> 前者是不可变字节数组，封装的是RowKey的字节数组，Result这是对应逻辑表中的一行数据，包括了所有列族及列。通过这两个参数就可以逐行读取表中的任何一个单元的数据了。
+>
+> 当然，表的消息要在Driver中进行设置！
+>
+> 除此以外，我们在Mapper阶段就对数据进行了操作对象的封装，到Reducer阶段可以直接写出！
+
+
+
+Reducer：
+
+```java
+public class MyReducer extends TableReducer<ImmutableBytesWritable, Put, NullWritable> {
+    @Override
+    protected void reduce(ImmutableBytesWritable key, Iterable<Put> values, Context context) throws IOException, InterruptedException {
+        for (Put value : values) {
+            context.write(NullWritable.get(), value);
+        }
+    }
+}
+```
+
+ 
+
+Driver：
+
+```java
+public class MyDriver implements Tool {
+
+    private Configuration conf;
+
+    @Override
+    public int run(String[] strings) throws Exception {
+        Job job = Job.getInstance(conf);
+
+        job.setJarByClass(MyDriver.class);
+
+        // job设置Mapper
+        TableMapReduceUtil.initTableMapperJob("fruit",
+                new Scan(),
+                MyMapper.class,
+                ImmutableBytesWritable.class,
+                Put.class, job);
+        // 设置Reducer
+        TableMapReduceUtil.initTableReducerJob("fruit2", MyReducer.class, job);
+
+        // 提交
+        boolean res = job.waitForCompletion(true);
+        return res ? 0 : 1;
+    }
+
+    @Override
+    public void setConf(Configuration configuration) {
+        conf = configuration;
+    }
+
+    @Override
+    public Configuration getConf() {
+        return conf;
+    }
+
+    public static void main(String[] args) {
+        try {
+            ToolRunner.run(new MyDriver(), args);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+**注意Job的Mapper的设置，将原先Mapper的相关设置集成到了一个方法中。**和Reducer差不多，都是使用TableMapReduceUtil下的方法！
+
+> 如何在本地连接到集群启动？
+
+1. 将HBase的hbase-site.xml复制一份放到项目的resources目录下（千万不要修改文件名！！）
+
+2. Driver代码改动：
+
+   ```java
+   public static void main(String[] args) {
+       try {
+           // 添加一份HBase的配置，并在启动时使用！！
+           Configuration configuration = HBaseConfiguration.create();
+           ToolRunner.run(configuration ,new MyDriver(), args);
+       } catch (Exception e) {
+           e.printStackTrace();
+       }
+   }
+   ```
+
+   通过看create()方法 你就知道为什么不让修改hbase-site.xml的文件名了！！<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200818135035.png" alt="image-20200818135035471" style="zoom:67%;" />
+
+3. 本地启动的时候，如果报了关于jackson的类未定义或者未找到的错，需要导入jackson相关的包：
+
+   ```xml
+   <dependency>
+       <groupId>org.codehaus.jackson</groupId>
+       <artifactId>jackson-mapper-asl</artifactId>
+       <version>1.8.8</version>
+   </dependency>
+   ```
+
+4. 并且本地启动是没有日志输出的，只能死等。或者导入log4j依赖，然后去吧hadoop里面log4j.properties的配置文件复制一份
+
+5. 运行完成，看结果：
+   ![image-20200818143937115](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200818143937.png)
+
+   所有name列的数据，被放到了fruit2表中！符合预期。
+
+----
+
+
+
+## 4.5、与Hive集成
+
+### 4.5.1、HBase与Hive的对比
+
+> Hive
+
+1. 数据分析框架
+2. 数据仓库
+3. 用于数据分析和清洗，延迟高
+4. 基于HDFS、MapReduce（数据存放在DataNode，编写的HQL最终转化为MR任务执行）
+
+
+
+> HBase
+
+1. 数据库：==面向列存储的==非关系行数据库
+2. 用于存储结构化和非结构化数据（不适合做关联查询）
+3. 存储基于HDFS,数据文件以HFile格式存储
+4. 延迟低，可以接入在线业务使用
+
+
+
+
+
+### 4.5.2、对接环境准备
+
+1. 环境变量设置(已经配置可以忽略)
+
+   ```shell
+   # HBase
+   export HBASE_HOME=/opt/module/hbase-1.3.6
+   
+   # Hive
+   export HIVE_HOME=/opt/module/hive-1.2.2
+   ```
+
+    
+
+2. 将HBase的jar包，创建软链接到Hive的lib目录下
+
+   `ln -s $HBASE_HOME/lib/* $HIVE_HOME/lib/`
+
+    
+
+3. 修改hive-site.xml 让其能够找到zookeeper的存在和位置
+
+   ```xml
+   <!-- zookeeper -->
+   <property>
+       <name>hive.zookeeper.quorum</name>
+       <value>hadoop102,hadoop103,hadoop104</value>
+   </property>
+   <!-- zookeeper端口(因为没有默认值) -->
+   <property>
+       <name>hive.zookeeper.client.port</name>
+       <value>2181</value>
+   </property>
+   ```
+
+    
+
+4. 创建一个Hive和Hbase的关联表
+
+   ```sql
+   create table hive_hbase_emp_table(
+       empno int,
+       ename string,
+       job string,
+       mgr int,
+       hiredate string,
+       sal double,
+       comm double,
+       deptno int
+   )
+   stored by 'org.apache.hadoop.hive.hbase.HBaseStorageHandler' -- 存储引擎
+   with serdeproperties("hbase.columns.mapping"=":key,info:ename,info:job,info:mgr,info:hiredate,info:sal,info:comm,info:deptno") -- 列的映射
+   tblproperties("hbase.table.name"="hbase_emp_table"); -- hbase的table
+   ```
+
+   必须保证两个框架中都没有这俩表！！
+
+   可能会出现版本兼容问题：
+
+   ![image-20200818161709815](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200818161709.png)
+
+   需要在hbase的环境下重新编译hive，将对应的jar包拷贝回集群。操作较为复杂。。
+
+
+
+### 4.5.3、常用的Hive对接场景
+
+我们一般都是在Hbase中有了一定数据后，然后通过Hive建立一个表和HBase的已有表进行关联，因为Hive中查看数据更加方便和顺眼。但是！！==在HBase中表已存在的时候，hive只能创建外部表(外部表的概念参考hive学习笔记)。==
+
+![image-20200818162311842](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200818162311.png)
+
+==创建好后，所有HBase的数据，都可以使用Hive进行查询。并且HBase可以持续修改。。==
+
+![image-20200818162550355](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200818162550.png)
+
+这才是生产中常用的使用方式！！
+
+
+

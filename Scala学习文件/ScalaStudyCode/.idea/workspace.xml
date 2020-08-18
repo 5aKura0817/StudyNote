@@ -30,12 +30,7 @@
     </select>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9b90fa23-0d06-4192-a8c9-95cd7d391dac" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../../HBase学习文件/HBase学习笔记.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../HBase学习文件/HBase学习笔记.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/META-INF/scalastudy.kotlin_module" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Scala学习笔记.md" beforeDir="false" afterPath="$PROJECT_DIR$/../Scala学习笔记.md" afterDir="false" />
-    </list>
+    <list default="true" id="9b90fa23-0d06-4192-a8c9-95cd7d391dac" name="Default Changelist" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -195,7 +190,7 @@
       <workItem from="1597320990551" duration="7939000" />
       <workItem from="1597394420398" duration="15000" />
       <workItem from="1597401701911" duration="11044000" />
-      <workItem from="1597493614209" duration="5210000" />
+      <workItem from="1597493614209" duration="5969000" />
     </task>
     <servers />
   </component>
@@ -251,22 +246,22 @@
       <screen x="63" y="0" width="1540" height="902" />
     </state>
     <state x="228" y="0" key="CommitChangelistDialog2/63.0.1540.902@63.0.1540.902" timestamp="1597154063368" />
-    <state width="1481" height="350" key="GridCell.Tab.0.bottom" timestamp="1597499621035">
+    <state width="1481" height="350" key="GridCell.Tab.0.bottom" timestamp="1597501815613">
       <screen x="63" y="0" width="1540" height="902" />
     </state>
-    <state width="1481" height="350" key="GridCell.Tab.0.bottom/63.0.1540.902@63.0.1540.902" timestamp="1597499621035" />
-    <state width="1481" height="350" key="GridCell.Tab.0.center" timestamp="1597499621035">
+    <state width="1481" height="350" key="GridCell.Tab.0.bottom/63.0.1540.902@63.0.1540.902" timestamp="1597501815613" />
+    <state width="1481" height="350" key="GridCell.Tab.0.center" timestamp="1597501815613">
       <screen x="63" y="0" width="1540" height="902" />
     </state>
-    <state width="1481" height="350" key="GridCell.Tab.0.center/63.0.1540.902@63.0.1540.902" timestamp="1597499621035" />
-    <state width="1481" height="350" key="GridCell.Tab.0.left" timestamp="1597499621035">
+    <state width="1481" height="350" key="GridCell.Tab.0.center/63.0.1540.902@63.0.1540.902" timestamp="1597501815613" />
+    <state width="1481" height="350" key="GridCell.Tab.0.left" timestamp="1597501815612">
       <screen x="63" y="0" width="1540" height="902" />
     </state>
-    <state width="1481" height="350" key="GridCell.Tab.0.left/63.0.1540.902@63.0.1540.902" timestamp="1597499621035" />
-    <state width="1481" height="350" key="GridCell.Tab.0.right" timestamp="1597499621035">
+    <state width="1481" height="350" key="GridCell.Tab.0.left/63.0.1540.902@63.0.1540.902" timestamp="1597501815612" />
+    <state width="1481" height="350" key="GridCell.Tab.0.right" timestamp="1597501815613">
       <screen x="63" y="0" width="1540" height="902" />
     </state>
-    <state width="1481" height="350" key="GridCell.Tab.0.right/63.0.1540.902@63.0.1540.902" timestamp="1597499621035" />
+    <state width="1481" height="350" key="GridCell.Tab.0.right/63.0.1540.902@63.0.1540.902" timestamp="1597501815613" />
     <state x="310" y="118" key="IDE.errors.dialog" timestamp="1597242467242">
       <screen x="63" y="0" width="1540" height="902" />
     </state>
