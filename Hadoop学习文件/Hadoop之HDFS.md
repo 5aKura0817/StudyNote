@@ -761,7 +761,7 @@ NameNode节点上：
 
 这么多文件，到底哪一个才是最新的呢？
 
-NameNode中可以看到一个与众不同的命名edits_inprogress_000xxxx，其实这个文件就是当前正在用于记录的日志文件！那个不怎么起眼的seen_txid就记录着当前正在使用的edits的文件编号。
+NameNode中可以看到一个与众不同的命名edits_inprogress_000xxxx，其实这个文件就是当前正在用于记录的日志文件！那个不怎么起眼的`seen_txid`就记录着当前正在使用的edits的文件编号。
 
 ![image-20200616232538074](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200616232538.png)
 
