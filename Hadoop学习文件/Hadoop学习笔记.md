@@ -1077,6 +1077,8 @@ Linux下SSH具体使用：
 
 3. 将公钥拷贝到hadoop103,104包括本机的Authorized_keys中
 
+   (以下的命令分别在每个机器上执行！！)
+
    `ssh-copy-id hadoop102`
 
    `ssh-copy-id hadoop103`

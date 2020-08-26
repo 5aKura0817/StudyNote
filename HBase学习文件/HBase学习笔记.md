@@ -136,7 +136,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
 
 
 
-   配置Zookeeper，默认是true,使用内置的Zookeeper。推荐设置为true，设置使用本地的Zookeeper
+   配置Zookeeper，默认是true,使用内置的Zookeeper。推荐设置为false，设置使用本地的Zookeeper
 
    ```shell
    # Tell HBase whether it should manage it's own instance of Zookeeper or not.
@@ -1448,7 +1448,9 @@ Flush，是过程对象是MemStore到HFile，而且每次刷写都是一个全�
    export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/opt/module/hbase-1.3.6/lib/*
    ```
 
-   ![image-20200817110743596](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200817110743.png)（图中有误，末尾缺了个**/***）
+   ![image-20200817110743596](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200817110743.png)
+
+   （图中有误，末尾缺了个**/***）
 
    就是将刚才我们看到的jar包让Hadoop能够扫描到！
 

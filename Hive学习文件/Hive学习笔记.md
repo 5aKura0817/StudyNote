@@ -303,7 +303,7 @@ Hive能处理的数据都是大规模的数据，而数据库的性能瓶颈的�
 
 所以改用MySQL来存储元数据。
 
-MySQL的安装步骤参考：[MySQL学习笔记](F:\GitProject\GitLearn\MarkDown\Mysql学习文件\MySQL学习笔记.md)
+MySQL的安装步骤参考：[MySQL学习笔记](/home/sakura/文档/git-local-repo/StudyNote/Mysql学习文件/MySQL学习笔记.md)
 
 ==仅仅安装配置MySQL还不够，还需要一个MySQL的连接驱动，稍后会将其解压文件中的驱动jar包加入到Hive的lib目录下==
 
@@ -364,6 +364,8 @@ hive-site.xml
 <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20200708210230594.png" alt="image-20200708210230594" style="zoom:50%;" />
 
 此时再回到Hive中，尝试多窗口启动hive也不会报错了！！
+
+==新版本必须先设置元数据存放在MySQL，但是直接重启后并没有生成元数据库，通过网上查阅资料后，发现是需要用`bin/schematool -dbType mysql -initSchema`来手动生成元数据！！==
 
 
 
