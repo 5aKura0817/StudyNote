@@ -136,7 +136,7 @@ Row_key用于对应逻辑结构中的一行数据，其中有两个重要列：`
 
 
 
-   配置Zookeeper，默认是true,使用内置的Zookeeper。推荐设置为true，设置使用本地的Zookeeper
+   配置Zookeeper，默认是true,使用内置的Zookeeper。推荐设置为false，设置使用本地的Zookeeper
 
    ```shell
    # Tell HBase whether it should manage it's own instance of Zookeeper or not.
@@ -899,7 +899,7 @@ max(32, hbase_heapsize * hbase.regionserver.global.memstore.size * 2 / logRollSi
 
 这是0.95版本前的策略。0.95版本后的策略是，每当StoreFile的大小达到了：
 
-`min(RegionNum^2 * hbase.hregion.memstore.flush.size, hbase,hregion.max.filesize)`的时候，就会进行一次拆分。
+`min(RegionNum^2*hbase.hregion.memstore.flush.size,hbase,hregion.max.filesize)`的时候，就会进行一次拆分。
 
 - RegionNum表示Region的数量
 - hbase.hregion.memstore.flush.size = 128MB
@@ -1448,7 +1448,9 @@ Flush，是过程对象是MemStore到HFile，而且每次刷写都是一个全�
    export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/opt/module/hbase-1.3.6/lib/*
    ```
 
-   ![image-20200817110743596](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200817110743.png)（图中有误，末尾缺了个**/***）
+   ![image-20200817110743596](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200817110743.png)
+
+   （图中有误，末尾缺了个**/***）
 
    就是将刚才我们看到的jar包让Hadoop能够扫描到！
 
@@ -1893,6 +1895,7 @@ public class MyDriver implements Tool {
    ![image-20200818161709815](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200818161709.png)
 
    需要在hbase的环境下重新编译hive，将对应的jar包拷贝回集群。操作较为复杂。。
+   **这种版本兼容问题，后续我们会使用cdh来解决！！**
 
 
 
@@ -1910,3 +1913,241 @@ public class MyDriver implements Tool {
 
 
 
+# 五、HBase优化
+
+## 5.1、高可用
+
+在入门框架学习的时候，我们就了解到了Masters是自带高可用特性的，即集群中的Master故障掉线后，通过==争夺资源==的方式，选出新的Master，保证集群的高可用！
+
+> 演示：
+
+首先我们通过单节点启动HBase集群中每台机器的HMaster，就会发现首先启动被选为master，后续上线的均作为备份，随听命等待上任！
+
+![1](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200828125622.png)
+
+通过web页面就可以很清晰看出来！
+
+![2](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200828130108.png)
+
+
+
+但是使用这种单节点启动的方式过于繁琐，所以**我们可以直接创建一个配置文件，标明我们想要作为BackupMaster的主机即可！**
+
+`backup-masters`（conf目录下）
+
+```
+hadoop103
+hadoop104
+```
+
+这样就表明，当集群启动的时候，会为这两个主机也启动HMaster进程作为Backup！
+
+一键启动集群测试：
+
+![3](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200828131132.png)
+
+![4](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200828131317.png)
+
+所以HBase是自带高可用功能的哦！
+
+
+
+## 5.2、预分区
+
+在HBase进阶学习过程中，我们就接触了RegionSplit的问题，单个Region在StoreFile达到一定量级后，会自动切分为两个Region进行存储，但是在集群中这种方式无法避免数据倾斜的问题。而现在要学习的预分区，就是解决数据在集群中发生倾斜的问题的一种手段。==提前预估数据的数量，同时结合集群的规模来合理进行预分区！==
+
+默认情况下，初始创建的表都只有一个分区（即一个Region）:
+
+![6](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200828135129.png)
+
+> 预分区表创建
+
+在正式创建预分区表的时候，我们先要知道分区是通过什么来决定数据所在分区的！！rowkey和一个全新的键值，这里我们暂且称其为**分区键**，进行比较，每个分区Region都有预定的**start_key和end_key**，web页面中表详细信息中，分区信息（TableRegions）就能看到这俩字段。对应的rowkey的数据就可以定位到某一个分区了！
+
+所以我们创建表的时候，主要就是对这两个值进行设置！！
+
+```shell
+create 'staff','info',SPLITS=>['1000','2000','3000','4000']
+```
+
+`SPLITS=>['1000','2000',..]`这是我们指定的分区切点，四刀一共五个分区！
+
+![7](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200828141626.png)
+
+==注意这里的分区键在和Rowkey比较的时候是按**字典序！！**因为rowkey本身在传输的时候就是字节数组！==
+
+所以你插入的rowkey=533的数据按字典序就在最后一个分区中！！
+
+
+
+当已有数据量特别大的时候，我们人为分析无法很精准，而且切点巨多写起来也很麻烦，所以HBase也可以自己分析文件数据进行分区，==分区数量=文件rowkey数量+1==
+
+splits.txt文件内容：
+
+```
+aaa
+ccc
+ddd
+bbb
+```
+
+HBase会如何处理呢？
+
+```shell
+create 'splits_table','data',SPLITS_FILE=>'/opt/data/splits.txt'
+```
+
+使用`SPLITS_FILE`指定我们要进行分区的数据文件，看看结果吧：（你以为他会直接按你写的数据顺序创建分区？）
+![8](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200828143038.png)
+
+HBase还是聪明的，按照数据字典序排序后，再来划分分区。
+
+---
+
+但是实际开发中，更多的还是使用API来实现分区的！
+
+之前我们创建表的时候，就只丢一个表描述器就不管了。但是他还有俩重载方法：
+
+```java
+public void createTable(HTableDescriptor desc, byte[] startKey, byte[] endKey, int numRegions)
+
+public void createTable(HTableDescriptor desc, byte[][] splitKeys)
+```
+
+- 给出所以数据StartKey和EndKey，然后指定分区数量，HBase平均划分
+
+- 给出一个分区键的字节数组，按照给定的分区切点进行分区，类似于第一种命令行分区方式。
+
+  （这里为什么是二维数组？你看看上面那个StartKey和EndKey不就是字节数组吗？！一个存放字节数组的数组～～）
+
+
+
+## 5.3、RowKey设计
+
+上面说了数据具体放在那个区，还是和RowKey息息相关，所以设计好RowKey至关重要。要从以下三个方面考虑：
+
+- 散列性
+- 唯一性
+- 长度原则（一般70～100位）
+
+常见的设置方案：Hash、加密算法、序列化、时间戳倒置、拼接字符串…
+
+==但是又有一个问题，为了方便我们读取数据方便，我们希望按照数据的特征集中存放，保证一定的数据集中性==，这样就和散列性产生了冲突！所以我们还需要将数据的某些特征字段和RowKey进行关联。
+
+> 背景：xx公司的通话记录数据要求分区存放，要满足用户查询指定时间段的通话记录。
+
+看到前半段，你可能会想到按电话号码分区，假如预定分区数量是300个（299个分区键）。那么为了保证同一个电话号码分到一个区里面。最粗暴的办法就是用手机号对300取模。将结果拼接到手机号的前面：
+
+```
+tel:15612341234
+region:tel%300 = 15612341234%300 = 134
+
+rowkey => 134_15612341234
+```
+
+通过这种方式确定的RowKey，就可以确保相同的电话号码在同一个分区中，并且是连续的！
+
+----
+
+但是继续看后半段，用户要查询时间段的通话记录（假设以日为单位）。因为每个人的通话频率不同，所以仅仅是按照手机号分区未免太草率，也极容易造成数据倾斜！**所以我们决定进一步优化Rowkey，让其关联起通话的日期（具体到日），这样通过手机号和具体的月份就可以确定到一个分区，然后读取数据通过手机号和日期比对取出连续的数据即可！！**
+
+假如还是300个分区，我将手机号和日期都数字化，然后进行一番操作（此处以加法+作为示范）然后对300取模即可确定分区：
+
+```
+tel:15612341234
+date:2020-08-28 => 20200828
+
+region: (tel+date)%300 = 162
+
+rowkey => 162_15612341234_20200830
+
+查询
+startkey => 162_15612341234_202008
+endkey => 162_15612341234_202009
+```
+
+这样即完成了数据的散列，又将数据内容和RowKey关联保证了一定的集中性！！
+
+
+
+## 5.4、内存优化和基础优化
+
+> 内存优化
+
+**在HBase中内存并不是越大越好**，应为内存大间接就会导致MemStore分到的内存也就会随之增大，那么当MemStore达到了内存峰值时候，只能阻塞慢慢刷写，直到刷写到正常范围才能恢复正常工作，而大内存就会导致这个阻塞的时间增长！
+
+并且在面临RegionServer级别的刷写到来时，大内存导致的就是刷写的时间会增加！
+
+
+
+> 常见的优化参数
+
+- **允许在HDFS的文件中追加内容**
+
+  `dfs.support.append`(hdfs-site.xml, hbase-site.xml)
+
+  开启HDFS追加同步，可以优秀的配合HBase的数据同步和持久化。默认值为true
+
+   
+
+- **优化DataNode允许的最大文件打开数**
+
+  `dfs.datanode.max.transfer.threads`(hdfs-site.xml)
+
+  HBase在写入和读取数据的时候通常都是对多个文件进行操作，可以根据集群的规模来进行调整。默认为4096
+
+   
+
+- **优化延迟高的数据操作的等待时间**
+
+  `dfs.image.transfer.timeout`(hdfs-site.xml)
+
+  有可能某些数据操作的正常情况下延时偏高，可能会被误判为超时操作。当存在这种情况的时候建议将此值设置调高，减少误判。默认值为60000ms=60s
+
+   
+
+- **优化数据的写入效率**
+
+  `mapreduce.map.output.compress`
+
+  `mapreduce.map.output.compress.codec`(mapred-site.xml)
+
+  将写入的数据在MapReduce阶段进行压缩，提高数据写入到HBase的速度。
+
+   
+
+- **设置RPC监听数量**
+
+  `hbase.regionserver.handler.count`(hbase-site.xml)
+
+  保证读写请求的高并发度，当读写请求特别密集的时候，调高此配置值。默认为30
+
+   
+
+- **优化HStore(HFile)文件大小**
+
+  `hbase.hregion.max.filesize`(hbase-site.xml)
+
+  在对接MR执行任务的时候，单个Region就对应一个Job，HFile太大输入数据就非常耗时。当Region的HFile大小总和达到了这个值，就会强行将HFile一分为二，并同时生成一个HRegion！
+
+   
+
+- **优化HBase客户端**
+
+  `hbase.client.write.buffer`(hbase-site.xml)
+
+  客户端的缓存大小。增大该值，客户端可以缓存更多的查询结果，同批次可以发送更多的请求，以减少RPC调用的次数，减小集群的压力，但是是以消耗更多的内存作为代价的！
+
+   
+
+- **指定scan.next扫描HBase所获取的行数**
+
+  `hbase.client.scanner.caching`（hbase-site.xml）
+
+  记得我们在使用API查询数据的时候，我使用了一个ResultScanner，这个东西就是负责从HBase的查询结果中扫描数据传递给程序的。因为一次性读出的话，数据太大占用的内存会很大拖慢程序运行。
+
+   
+
+- **flush、Compact、Splits**机制的策略优化
+
+  参考前面所讲的相关内容。。

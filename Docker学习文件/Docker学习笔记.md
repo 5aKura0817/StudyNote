@@ -2,7 +2,7 @@
 
 # Docker
 
-<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173024.jpg" alt="img" style="zoom:50%;" />
+<img src="Docker学习笔记.assets/20200520173024.jpg" alt="img" style="zoom:50%;" />
 
 ## 是什么
 
@@ -53,7 +53,7 @@ Docker 可以让开发者打包他们的应用以及依赖包到一个轻量级�
 - **容器（Container）**：镜像（Image）和容器（Container）的关系，就像是面向对象程序设计中的类和实例一样，镜像是静态的定义，容器是镜像运行时的实体。容器可以被创建、启动、停止、删除、暂停等。每个容器是相互隔离的。==可以把容器看作一个简易的Linux环境==
 - **仓库（Repository）**：仓库可看着一个代码控制中心，用来==保存镜像==，官方的DockerHub，国内可以使用阿里云。
 
-![img](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173026.jpg)
+![img](Docker学习笔记.assets/20200520173026.jpg)
 
 
 
@@ -184,7 +184,7 @@ CentOS7上运行Docker，内核版本3.10+，64位
 
 
 
-![image-20200519175131174](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173104.png)
+![image-20200519175131174](Docker学习笔记.assets/20200520173104.png)
 
 Docker直接利用宿主机的硬件，容器之间相互的独立，VM需要安装笨重的OS。所以使用Docker要比使用虚拟机来配置安装环境更加便捷。
 
@@ -213,7 +213,7 @@ Docker直接利用宿主机的硬件，容器之间相互的独立，VM需要安
 
 ## Docker运行原理
 
-![img](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173025.png)
+![img](Docker学习笔记.assets/20200520173025.png)
 
 Docker是一个**Client-Server**结构的系统，Docker守护进程（Docker daemon）运行在主机上， 然后通过Socket连接从客户端访问，守护进程从客户端接受命令并管理运行在主机上的容器。 **容器，是一个运行时环境，就是我们前面说到的集装箱。**
 
@@ -235,7 +235,7 @@ Docker是一个**Client-Server**结构的系统，Docker守护进程（Docker da
 
 `docker images` 查看主机上的镜像信息
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724202329.png)
+![](Docker学习笔记.assets/20200724202329.png)
 
 
 
@@ -255,7 +255,7 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 - `-s num`：列举点赞数超过num的镜像
 
-  ![image-20200505152600538](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724201541.png)
+  ![image-20200505152600538](Docker学习笔记.assets/20200724201541.png)
   
   
 
@@ -275,7 +275,7 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `docker container ls`：列举本地容器信息
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724201710.png)
+![](Docker学习笔记.assets/20200724201710.png)
 
 
 
@@ -301,7 +301,7 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
   - **hostPort:containerPort**（最常用）
 
-    ![image-20200505154200735](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724201621.png)
+    ![image-20200505154200735](Docker学习笔记.assets/20200724201621.png)
     
     
 
@@ -317,13 +317,13 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `docker ps` 查看正在运行的容器
 
-![image-20200505162151962](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173032.png)
+![image-20200505162151962](Docker学习笔记.assets/20200520173032.png)
 
 选项：
 
 `-a`：查询正在运行和历史运行的容器
 
-![image-20200505160846194](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724201728.png)
+![image-20200505160846194](Docker学习笔记.assets/20200724201728.png)
 
 
 
@@ -339,15 +339,15 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `docker exec -it 容器id 命令`在容器外进行操作
 
-![image-20200505162501474](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724204142.png)
+![image-20200505162501474](Docker学习笔记.assets/20200724204142.png)
 
 `docker exec -it 容器id /bin/bash`
 
-![image-20200505172254692](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724204127.png)
+![image-20200505172254692](Docker学习笔记.assets/20200724204127.png)
 
 `docker attach 容器ID`以上两个命令都可以重新进入容器
 
-![image-20200505173312886](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724204113.png)
+![image-20200505173312886](Docker学习笔记.assets/20200724204113.png)
 
 区别：
 
@@ -360,7 +360,7 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `docker cp 容器名字:拷贝文件或目录 拷贝目标位置或文件名`
 
-![image-20200505173239696](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724204053.png)
+![image-20200505173239696](Docker学习笔记.assets/20200724204053.png)
 
 ---
 
@@ -372,7 +372,7 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `docker start xxx`...启动容器
 
-![image-20200514214234274](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173037.png)
+![image-20200514214234274](Docker学习笔记.assets/20200520173037.png)
 
 
 
@@ -396,7 +396,7 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 `docker stats 容器名`：查看docker中运行资源占用情况
 
-![image-20200505163625065](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724201838.png)
+![image-20200505163625065](Docker学习笔记.assets/20200724201838.png)
 
 `docker inspect 容器Id/容器名` 查看容器的详细信息。
 
@@ -414,7 +414,7 @@ tomcat中集成了JDK等运行所需要的所有环境。
   docker.io/portainer/portainer
   ```
 
-  ![image-20200514221628653](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724205841.png)
+  ![image-20200514221628653](Docker学习笔记.assets/20200724205841.png)
   
   当8080端口开放后，外网通过8080端口就可以进入可视化界面
 
@@ -424,19 +424,19 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 选择本地
 
-![image-20200514223859374](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724205901.png)
+![image-20200514223859374](Docker学习笔记.assets/20200724205901.png)
 
 
 
 主界面
 
-![image-20200514224004544](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724205907.png)
+![image-20200514224004544](Docker学习笔记.assets/20200724205907.png)
 
 
 
 一些详细信息
 
-![image-20200514224051558](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724205913.png)
+![image-20200514224051558](Docker学习笔记.assets/20200724205913.png)
 
 
 
@@ -455,7 +455,7 @@ tomcat中集成了JDK等运行所需要的所有环境。
 > 问什么 Docker 镜像要采用这种分层结构呢？
 > 最大的一个好处就是 - ==共享资源，节省空间。==
 
-![image-20200520002741607](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173105.png)
+![image-20200520002741607](Docker学习笔记.assets/20200520173105.png)
 
 这种文件分层的思想在Docker中无处不在，
 
@@ -475,7 +475,7 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 例如我们在aliyun上pull的tomcat中每次都要将webapp.dist中的内容cp到webapp中才能正常访问页面，这样的话我们每次启动tomcat都需要设置一遍，现在我们可以对其进行修改 然后commit，从此后就使用我们commit的镜像就可以。】
 
-![image-20200514224159725](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724201925.png)
+![image-20200514224159725](Docker学习笔记.assets/20200724201925.png)
 
 
 
@@ -485,7 +485,7 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 在使用Docker镜像搭建环境的时候，总有个问题就是，由于容器的沙箱机制，导致容器里面的文件系统，和Docker宿主的机的文件系统是隔离的，==一旦我们删除了容器，其对应的所有文件信息也会被连带删除==，这样并不符合我们的开发预定（例如MySQL的数据库文件我们就需要持久化到本地，而不是放在容器中！），有什么办法可以将容器内的文件同步到宿主机上呢？
 
-![第八篇：Docker镜像结构原理](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203835.png)
+![第八篇：Docker镜像结构原理](Docker学习笔记.assets/20200724203835.png)
 
 
 
@@ -508,17 +508,17 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 测试一下：
 
-![image-20200518221613252](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203849.png)
+![image-20200518221613252](Docker学习笔记.assets/20200724203849.png)
 
 双向同步测试：
 
-<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173048.png" alt="image-20200518220407767" style="zoom: 45%;" />
+<img src="Docker学习笔记.assets/20200520173048.png" alt="image-20200518220407767" style="zoom: 45%;" />
 
-![image-20200514234238076](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203917.png)
+![image-20200514234238076](Docker学习笔记.assets/20200724203917.png)
 
 通过`docker inspect`来查看一下挂载信息(Mounts)：
 
-![image-20200518221111805](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173050.png)
+![image-20200518221111805](Docker学习笔记.assets/20200520173050.png)
 
 
 
@@ -532,9 +532,9 @@ tomcat中集成了JDK等运行所需要的所有环境。
 
 > 一般情况下，不指定主机路径，默认的挂载路径在`/var/lib/docker/volume`下，一个以挂载名命名的文件夹。
 >
-> ![image-20200518215609561](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203546.png)
+> ![image-20200518215609561](Docker学习笔记.assets/20200724203546.png)
 >
-> ![image-20200518230131883](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203801.png)
+> ![image-20200518230131883](Docker学习笔记.assets/20200724203801.png)
 
 这种匿名挂载方式不便于我们定位，再来说一说**具名挂载**
 
@@ -544,7 +544,7 @@ tomcat中集成了JDK等运行所需要的所有环境。
 docker run -it -v juming:/home centos
 ```
 
-<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173049.png" alt="image-20200518220710797" style="zoom:50%;" />
+<img src="Docker学习笔记.assets/20200520173049.png" alt="image-20200518220710797" style="zoom:50%;" />
 
 
 
@@ -625,35 +625,35 @@ CMD /bin/bash
 
 -t 参数写镜像名和标签
 
-![image-20200518230830070](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203443.png)
+![image-20200518230830070](Docker学习笔记.assets/20200724203443.png)
 
 创建过程也能看出，每条命令都是在一个容器中运行然后移除过渡容器，最终形成我们自己的镜像。↓
 
-![image-20200518225320265](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724202951.png)
+![image-20200518225320265](Docker学习笔记.assets/20200724202951.png)
 
 
 
 现在由于我们已经把挂载信息写在了镜像创建的dockerfile中，所以我们直接启动就能看到挂载的文件；
 
-![image-20200519162521227](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203024.png)
+![image-20200519162521227](Docker学习笔记.assets/20200724203024.png)
 
 
 
 同样我们可以使用Docker inspect查看镜像的信息，检查挂载目录在本机的位置
 
-![image-20200519162020975](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724202817.png)
+![image-20200519162020975](Docker学习笔记.assets/20200724202817.png)
 
 
 
 依然是这个熟悉的位置，并且确定就是一个匿名挂载。并且和我们之前进行挂载的效果一模一样：
 
-![image-20200519162948501](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173058.png)
+![image-20200519162948501](Docker学习笔记.assets/20200520173058.png)
 
 
 
 现在完成了宿主机与容器之间的数据互通，那能不能做到**容器之间的数据互通**呢？
 
-![image-20200519162728559](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203059.png)
+![image-20200519162728559](Docker学习笔记.assets/20200724203059.png)
 
 
 
@@ -665,7 +665,7 @@ CMD /bin/bash
 
 在启动时通过 `--volumes-from 容器名`参数就可将指定容器的数据拷贝使用，并且是==双向绑定==
 
-![image-20200519162607760](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200724203138.png)
+![image-20200519162607760](Docker学习笔记.assets/20200724203138.png)
 
 ```shell
 [root@localhost volumes]# docker run -it --name centos02 --volumes-from centos01 sakura/centos:1.0
@@ -677,11 +677,11 @@ CMD /bin/bash
 
 centos01:
 
-![image-20200519171331236](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173100.png)
+![image-20200519171331236](Docker学习笔记.assets/20200520173100.png)
 
 centos02:
 
-![image-20200519171417767](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173101.png)
+![image-20200519171417767](Docker学习笔记.assets/20200520173101.png)
 
 可以发现，两个容器在本地的挂载地址是一模一样的，也就证明确实==宿主机充当的一个中介的作用==。
 
@@ -710,7 +710,7 @@ centos02:
 - 所有的Dockerfile指令关键字均是大写
 - Dockerfile中指令是从上到下顺次执行。
 
-<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173103.png" alt="image-20200519173344829" style="zoom:70%;" />
+<img src="Docker学习笔记.assets/20200520173103.png" alt="image-20200519173344829" style="zoom:70%;" />
 
 `FROM`：设置基础镜像
 
@@ -769,23 +769,23 @@ CMD /bin/bash
 docker build -f dockerfile -t mycentos .
 ```
 
-![image-20200519173213823](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520173102.png)
+![image-20200519173213823](Docker学习笔记.assets/20200520173102.png)
 
 
 
 这里就有了我们创建好的镜像，直接使用即可。
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520183536.png)
+![](Docker学习笔记.assets/20200520183536.png)
 
 之前无法正常使用的命令现在都可以使用了。并且进入容器后直接进入工作目录(WORKDIR)
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520203418.png)
+![](Docker学习笔记.assets/20200520203418.png)
 
 
 
 除此以外，我们还可以使用`docker history`来查看某一个特定容器的构建过程
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200520211636.png)
+![](Docker学习笔记.assets/20200520211636.png)
 
 
 
@@ -894,7 +894,7 @@ docker run -d -p 9090:8080 -v ...
 curl localhost:9090
 ```
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200521233024.png)
+![](Docker学习笔记.assets/20200521233024.png)
 
 
 
@@ -902,19 +902,19 @@ curl localhost:9090
 
 到此为止，我们已经掌握了docker镜像的获取、使用、创建，还剩下最后一步就是将自己的镜像上传到DockerHub或者阿里云镜像仓库。
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200522000315.png)
+![](Docker学习笔记.assets/20200522000315.png)
 
 使用命令`docker push`，在此之前我们必须先登录dockerhub帐号：`docker login -u 用户名` 
 
 相关操作，参考阿里云也给出的官方文档：
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200522000717.png)
+![](Docker学习笔记.assets/20200522000717.png)
 
 
 
 **docker全流程**
 
-![img](https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1590137684464&di=f6795176c0a36a7cdb36030a4ec1ed37&imgtype=0&src=http%3A%2F%2Fwww.uml.org.cn%2Fyunjisuan%2Fimages%2F2016110921.png)
+![img](Docker学习笔记.assets/timg)
 
 ---
 
@@ -928,7 +928,7 @@ curl localhost:9090
 
 先使用`ip addr`或者`ifconfig`命令来查看我们Linux的网络信息：
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200522150648.png)
+![](Docker学习笔记.assets/20200522150648.png)
 
 显然这里的Docker0网卡就是我们需要了解的东西，在后面其实它的作用相当于一个路由器起到了路由转发的功能。
 
@@ -940,7 +940,7 @@ docker run -it -d -P --name mytomca01 mytomcat
 
 发现多出来一个网卡：
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200522162935.png)
+![](Docker学习笔记.assets/20200522162935.png)
 
 网卡名是：`vethbe861dd@if10`，编号是`11`可以肯定这个网卡是一个虚拟出来的设备，并且和我们启动的Tomcat容器有紧密的关系，现在我们进入容器内部查看一下网卡情况
 
@@ -948,13 +948,13 @@ docker run -it -d -P --name mytomca01 mytomcat
 docker exec mytomca01 ip addr
 ```
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200522162821.png)
+![](Docker学习笔记.assets/20200522162821.png)
 
 这片网卡的名是：`eth0@if11`，编号是`10`，再看看上面那个那片网卡的信息，两边网卡之间有不简单的关系。
 
 我们来尝试相互ping一下网络：
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200522163447.png)
+![](Docker学习笔记.assets/20200522163447.png)
 
 相互都能够Ping通，那么他们之间是一个什么样的关系呢？
 
@@ -970,21 +970,21 @@ docker exec mytomca01 ip addr
 docker run -itd -P --name mytomcat02 mytomcat
 ```
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200522164738.png)
+![](Docker学习笔记.assets/20200522164738.png)
 
 又多出一个网卡，通过上面的案例，可以猜到容器内部的网卡名是：`eth0@if13`，编号是`12`
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200522165509.png)
+![](Docker学习笔记.assets/20200522165509.png)
 
 话不多说我们之间开始尝试两个容器相互Ping：
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200522165707.png)
+![](Docker学习笔记.assets/20200522165707.png)
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200522170110.png)
+![](Docker学习笔记.assets/20200522170110.png)
 
 发现是可以相互ping通的，那么大概的模型就是这样：
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200522171443.png)
+![](Docker学习笔记.assets/20200522171443.png)
 
 Docker0和这些容器之间的网卡之间有一座桥，相当于一个中转站，通过编号的网卡名来识别是那个容器发来的信息。并通过对应的接口接收。
 
@@ -1007,7 +1007,7 @@ Docker0和这些容器之间的网卡之间有一座桥，相当于一个中转�
 [root@localhost ~]# docker run -it -d -P --name mytomcat02 --link mytomcat01 mytomcat
 ```
 
-![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200522233456.png)
+![](Docker学习笔记.assets/20200522233456.png)
 
 此时貌似是通过 容器名访问的，其实不然。
 
@@ -1015,15 +1015,15 @@ Docker0和这些容器之间的网卡之间有一座桥，相当于一个中转�
 
 在其/etc/hosts文件中就存放者这个秘密：
 
-![image-20200523142541641](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523142541.png)
+![image-20200523142541641](Docker学习笔记.assets/20200523142541.png)
 
 那我们来测试一下当ip变化时，还能不能Ping通吧：
 
 > 经过测试无论mytomcat01的IP怎么变化，mytomcat02都总是能够定位到mytomcat01的ip，并且在两者都处于关闭的情况下，必须先启动mytomcat01再才能启动mytomcat02，但是当前者宕机之后，重启ip发生了变化，mytomcat02的hosts文件中的ip也会随着变化。
 
-![image-20200523160050514](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523160050.png)
+![image-20200523160050514](Docker学习笔记.assets/20200523160050.png)
 
-![image-20200523160100049](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523160100.png)
+![image-20200523160100049](Docker学习笔记.assets/20200523160100.png)
 
 所以说算是实现了这个功能，但是其底层还是通过ip去访问。
 
@@ -1039,7 +1039,7 @@ Docker0和这些容器之间的网卡之间有一座桥，相当于一个中转�
 
 使用docker network ls查看已经创建的网络
 
-![image-20200523141855772](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523141855.png)
+![image-20200523141855772](Docker学习笔记.assets/20200523141855.png)
 
 共有四种模式：
 
@@ -1069,29 +1069,29 @@ Docker0和这些容器之间的网卡之间有一座桥，相当于一个中转�
 
 看两个关键的地方：
 
-![image-20200523164511284](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523164511.png)
+![image-20200523164511284](Docker学习笔记.assets/20200523164511.png)
 
 这个172.17.0.1是不是非常熟悉，他就是我们网卡中见过的docker0
 
 在下面的Options中可以发现这个网桥的名字是docker0
 
-![image-20200523164737358](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523164737.png)
+![image-20200523164737358](Docker学习笔记.assets/20200523164737.png)
 
 通过ip addr也能查到docker0的ip
 
-![image-20200523164628658](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523164628.png)
+![image-20200523164628658](Docker学习笔记.assets/20200523164628.png)
 
 
 
 其次还有一个位置：就是使用这个网络模式容器列表
 
-![image-20200523164927569](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523164927.png)
+![image-20200523164927569](Docker学习笔记.assets/20200523164927.png)
 
 
 
 同样我们查看容器的network信息也能发现关联的信息：
 
-![image-20200523165112760](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523165112.png)
+![image-20200523165112760](Docker学习笔记.assets/20200523165112.png)
 
 首先是bridge表明的网络的模式名是bridge，并给除了网络模式的id，这个id正是我们上面查看的bridge。
 
@@ -1115,7 +1115,7 @@ Docker0和这些容器之间的网卡之间有一座桥，相当于一个中转�
 
 - 网关：Gateway
 
-  ![image-20200523171211991](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523171212.png)
+  ![image-20200523171211991](Docker学习笔记.assets/20200523171212.png)
 
 这两个参数都是相对于我们创建的网络模式，不影响其他网络。
 
@@ -1133,7 +1133,7 @@ NETWORK ID          NAME                DRIVER              SCOPE
 
 我们来简单看看我们创建的网络模式信息：
 
-<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523171750.png" alt="image-20200523171750663" style="zoom:67%;" />
+<img src="Docker学习笔记.assets/20200523171750.png" alt="image-20200523171750663" style="zoom:67%;" />
 
 还没有任何容器加入到这个网络中，我们现在去创建几个容器
 
@@ -1145,35 +1145,35 @@ docker run -it -d -P --name=mytomcat03 --net=mynet mytomcat
 
 然后我们查看其中一个容器的网络信息：
 
-<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523192417.png" alt="image-20200523192417895" style="zoom:67%;" />
+<img src="Docker学习笔记.assets/20200523192417.png" alt="image-20200523192417895" style="zoom:67%;" />
 
 网络模式mynet 和 ip 地址都是有效的。
 
 我们再看看mynet中是不是有我们添加的容器：
 
-<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523192542.png" alt="image-20200523192542713" style="zoom:67%;" />
+<img src="Docker学习笔记.assets/20200523192542.png" alt="image-20200523192542713" style="zoom:67%;" />
 
 可以看到确实是有这三个容器，并且他们是在同一个子网下的，那么通过ip相互应该是可以Ping通的，那换成容器名字呢？
 
 1. 主机上面依然只能用ip ping通
 
-   ![](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523192845.png)
+   ![](Docker学习笔记.assets/20200523192845.png)
 
 2. 容器之间：
 
-   ![image-20200523193006360](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523193006.png)
+   ![image-20200523193006360](Docker学习笔记.assets/20200523193006.png)
 
    完全没有问题，那么我们看看hosts文件有没有被修改。
 
 3. hosts文件
 
-   <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523193124.png" alt="image-20200523193124760" style="zoom:67%;" />
+   <img src="Docker学习笔记.assets/20200523193124.png" alt="image-20200523193124760" style="zoom:67%;" />
 
    没有修改的迹象。
 
 4. 模拟宕机，重启ip变化
 
-   <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200523193459.png" alt="image-20200523193459648"  />
+   <img src="Docker学习笔记.assets/20200523193459.png" alt="image-20200523193459648"  />
 
    仍然没有问题。
 
@@ -1191,15 +1191,15 @@ docker run -it -d -P --name=mytomcat03 --net=mynet mytomcat
 
 刚才我们使用自定义网络，形成了一个独立的网络系统，此网络系统外的除了主机以外的其他容器都是不能于这个网络中的容器通信的。
 
-![image-20200524104734953](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200524104735.png)
+![image-20200524104734953](Docker学习笔记.assets/20200524104735.png)
 
 如图中的示意：不同网络下的的容器是无法相互ping通的(ip也不行)，其实在我们创建网络模式的时候，就出现了一个很有意思的事情，就是==主机上新增了一个虚拟网卡。==这个虚拟网卡与docker0是相同作用，只是作用的网络不同罢了。
 
-![image-20200524105601130](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200524105601.png)
+![image-20200524105601130](Docker学习笔记.assets/20200524105601.png)
 
 当然创建容器时也会创建一对虚拟网卡，不过在使用我们自定义的网络模式时候，创建的网络系统的docker0换了扮演者：
 
-<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200522171443.png" style="zoom:50%;" />
+<img src="Docker学习笔记.assets/20200522171443.png" style="zoom:50%;" />
 
 这次docker0位置的换了我们创建的网关，即mynet。
 
@@ -1216,7 +1216,7 @@ docker network connect mynet mytomcat05
 
 然后我们再来尝试ping一下mynet中的容器：
 
-![image-20200524110840895](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200524110840.png)
+![image-20200524110840895](Docker学习笔记.assets/20200524110840.png)
 
 无论是通过ip还容器名都是可以ping通的！
 
@@ -1224,13 +1224,13 @@ docker network connect mynet mytomcat05
 
 - ip变化?
 
-  ![image-20200524111049690](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200524111049.png)
+  ![image-20200524111049690](Docker学习笔记.assets/20200524111049.png)
 
 > 一看网络信息就发现，这个容器同时拥有了两个IP，相当于这个容器同时属于两个网络。
 
 - 同样，容器的网络信息也会变化：
 
-  <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200524111350.png" alt="image-20200524111350336" style="zoom:67%;" />
+  <img src="Docker学习笔记.assets/20200524111350.png" alt="image-20200524111350336" style="zoom:67%;" />
 
 
 

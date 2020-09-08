@@ -244,6 +244,9 @@ Kafka版本：Scala 2.11  - [kafka_2.11-0.11.0.0.tgz](https://archive.apache.org
    ![image-20200806150147593](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200806150147.png)
 
    修改`bin/kafka-run-class.sh`：
+   
+   > 建议最好还是先检查一下JAVA的环境变量配置！！
+   
    <img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/20200806150415.png" alt="image-20200806150415822" style="zoom:67%;" />
 
 

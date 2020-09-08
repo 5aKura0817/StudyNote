@@ -1213,13 +1213,13 @@ public class TestTransacation02 {
    ```shell
    mysql>use mysql;
    
-   mysql>select 'host' from user where user='root';
+   mysql>select host from user where user='root';
    
    mysql>update user set host = '%' where user ='root';
    
    mysql>flush privileges;
    
-   mysql>select 'host'   from user where user='root';
+   mysql>select 'host'   from user where user='root'
    ```
 
 10. 开启服务开机自启
