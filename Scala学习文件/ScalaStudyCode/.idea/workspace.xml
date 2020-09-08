@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="BranchesTreeState">
     <expand>
       <path>
@@ -30,7 +33,15 @@
     </select>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9b90fa23-0d06-4192-a8c9-95cd7d391dac" name="Default Changelist" comment="" />
+    <list default="true" id="9b90fa23-0d06-4192-a8c9-95cd7d391dac" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/../../HBase学习文件/HBase学习笔记.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../HBase学习文件/HBase学习笔记.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../MarkDown学习/MarkDown使用笔记.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../MarkDown学习/MarkDown使用笔记.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../SSM系列/MyBatis学习文件/MyBatis学习笔记.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../SSM系列/MyBatis学习文件/MyBatis学习笔记.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/jarRepositories.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/jarRepositories.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Scala学习笔记.md" beforeDir="false" afterPath="$PROJECT_DIR$/../Scala学习笔记.md" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -62,9 +73,9 @@
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
-        <option name="localRepository" value="F:\Environment\apache-maven-3.6.3\maven-repo" />
-        <option name="mavenHome" value="$PROJECT_DIR$/../../../../Environment/apache-maven-3.6.3" />
-        <option name="userSettingsFile" value="F:\Environment\apache-maven-3.6.3\conf\settings.xml" />
+        <option name="localRepository" value="$USER_HOME$/environment/maven-3.6.3/local-repo" />
+        <option name="mavenHome" value="$USER_HOME$/environment/maven-3.6.3" />
+        <option name="userSettingsFile" value="$USER_HOME$/environment/maven-3.6.3/conf/settings.xml" />
       </MavenGeneralSettings>
     </option>
     <option name="importingSettings">
@@ -91,26 +102,15 @@
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
+    <property name="full.screen.before.presentation.mode" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="project.structure.last.edited" value="Project" />
     <property name="project.structure.proportion" value="0.0" />
     <property name="project.structure.side.proportion" value="0.2" />
     <property name="scala_project_settings_configurable.last_selected_tab_index" value="7" />
-    <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
+    <property name="settings.editor.selected.configurable" value="yiiguxing.plugin.translate" />
   </component>
-  <component name="RunManager" selected="Application.LazyFunc">
-    <configuration name="FuncNotice02" type="Application" factoryName="Application" temporary="true">
-      <option name="MAIN_CLASS_NAME" value="com.sakura.chapter05.FuncNotice02" />
-      <module name="scalastudy" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.sakura.chapter05.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
+  <component name="RunManager" selected="Application.PrintDemo">
     <configuration name="FuncNotice03" type="Application" factoryName="Application" temporary="true">
       <option name="MAIN_CLASS_NAME" value="com.sakura.chapter05.FuncNotice03" />
       <module name="scalastudy" />
@@ -163,16 +163,41 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="PrintDemo" type="Application" factoryName="Application" temporary="true">
+      <option name="MAIN_CLASS_NAME" value="com.sakura.chapter01.PrintDemo" />
+      <module name="ScalaStudyCode" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.sakura.chapter01.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="ArquillianJUnit" factoryName="" nameIsGenerated="true">
+      <option name="arquillianRunConfiguration">
+        <value>
+          <option name="containerStateName" value="" />
+        </value>
+      </option>
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.PrintDemo" />
         <item itemvalue="Application.LazyFunc" />
         <item itemvalue="Application.FuncNotice05" />
         <item itemvalue="Application.FuncNotice03" />
         <item itemvalue="Application.FuncNotice04" />
-        <item itemvalue="Application.FuncNotice02" />
       </list>
     </recent_temporary>
   </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="SvnConfiguration">
     <configuration />
   </component>
@@ -191,11 +216,13 @@
       <workItem from="1597394420398" duration="15000" />
       <workItem from="1597401701911" duration="11044000" />
       <workItem from="1597493614209" duration="5969000" />
+      <workItem from="1598583812423" duration="3196000" />
+      <workItem from="1598939687732" duration="714000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
-    <option name="version" value="2" />
+    <option name="version" value="3" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
@@ -230,9 +257,14 @@
       <screen x="63" y="0" width="1540" height="902" />
     </state>
     <state x="447" y="0" key="#Scala/63.0.1540.902@63.0.1540.902" timestamp="1597239411446" />
-    <state x="352" y="29" key="#com.intellij.ide.util.frameworkSupport.AddFrameworkSupportDialog" timestamp="1597147530236">
-      <screen x="63" y="0" width="1540" height="902" />
+    <state x="568" y="453" key="#com.intellij.framework.addSupport.AddSupportForSingleFrameworkDialog" timestamp="1598942451715">
+      <screen x="0" y="27" width="1920" height="1053" />
     </state>
+    <state x="568" y="453" key="#com.intellij.framework.addSupport.AddSupportForSingleFrameworkDialog/0.27.1920.1053@0.27.1920.1053" timestamp="1598942451715" />
+    <state x="360" y="61" key="#com.intellij.ide.util.frameworkSupport.AddFrameworkSupportDialog" timestamp="1598583865758">
+      <screen x="0" y="27" width="1920" height="1053" />
+    </state>
+    <state x="360" y="61" key="#com.intellij.ide.util.frameworkSupport.AddFrameworkSupportDialog/0.27.1920.1053@0.27.1920.1053" timestamp="1598583865758" />
     <state x="352" y="29" key="#com.intellij.ide.util.frameworkSupport.AddFrameworkSupportDialog/63.0.1540.902@63.0.1540.902" timestamp="1597147530236" />
     <state x="236" y="351" key="#com.intellij.refactoring.move.MoveHandler.SelectRefactoringDialog" timestamp="1597306341800">
       <screen x="63" y="0" width="1540" height="902" />
@@ -246,29 +278,54 @@
       <screen x="63" y="0" width="1540" height="902" />
     </state>
     <state x="228" y="0" key="CommitChangelistDialog2/63.0.1540.902@63.0.1540.902" timestamp="1597154063368" />
-    <state width="1481" height="350" key="GridCell.Tab.0.bottom" timestamp="1597501815613">
-      <screen x="63" y="0" width="1540" height="902" />
+    <state x="441" y="169" key="FileChooserDialogImpl" timestamp="1598584664876">
+      <screen x="0" y="27" width="1920" height="1053" />
     </state>
+    <state x="441" y="169" key="FileChooserDialogImpl/0.27.1920.1053@0.27.1920.1053" timestamp="1598584664876" />
+    <state x="510" y="209" width="1242" height="690" key="GrepConsoleSettings" timestamp="1598586244418">
+      <screen x="0" y="27" width="1920" height="1053" />
+    </state>
+    <state x="510" y="209" width="1242" height="690" key="GrepConsoleSettings/0.27.1920.1053@0.27.1920.1053" timestamp="1598586244418" />
+    <state width="1858" height="335" key="GridCell.Tab.0.bottom" timestamp="1598588840828">
+      <screen x="0" y="27" width="1920" height="1053" />
+    </state>
+    <state width="1858" height="335" key="GridCell.Tab.0.bottom/0.27.1920.1053@0.27.1920.1053" timestamp="1598588840828" />
     <state width="1481" height="350" key="GridCell.Tab.0.bottom/63.0.1540.902@63.0.1540.902" timestamp="1597501815613" />
-    <state width="1481" height="350" key="GridCell.Tab.0.center" timestamp="1597501815613">
-      <screen x="63" y="0" width="1540" height="902" />
+    <state width="1858" height="335" key="GridCell.Tab.0.center" timestamp="1598588840828">
+      <screen x="0" y="27" width="1920" height="1053" />
     </state>
+    <state width="1858" height="335" key="GridCell.Tab.0.center/0.27.1920.1053@0.27.1920.1053" timestamp="1598588840828" />
     <state width="1481" height="350" key="GridCell.Tab.0.center/63.0.1540.902@63.0.1540.902" timestamp="1597501815613" />
-    <state width="1481" height="350" key="GridCell.Tab.0.left" timestamp="1597501815612">
-      <screen x="63" y="0" width="1540" height="902" />
+    <state width="1858" height="335" key="GridCell.Tab.0.left" timestamp="1598588840828">
+      <screen x="0" y="27" width="1920" height="1053" />
     </state>
+    <state width="1858" height="335" key="GridCell.Tab.0.left/0.27.1920.1053@0.27.1920.1053" timestamp="1598588840828" />
     <state width="1481" height="350" key="GridCell.Tab.0.left/63.0.1540.902@63.0.1540.902" timestamp="1597501815612" />
-    <state width="1481" height="350" key="GridCell.Tab.0.right" timestamp="1597501815613">
-      <screen x="63" y="0" width="1540" height="902" />
+    <state width="1858" height="335" key="GridCell.Tab.0.right" timestamp="1598588840828">
+      <screen x="0" y="27" width="1920" height="1053" />
     </state>
+    <state width="1858" height="335" key="GridCell.Tab.0.right/0.27.1920.1053@0.27.1920.1053" timestamp="1598588840828" />
     <state width="1481" height="350" key="GridCell.Tab.0.right/63.0.1540.902@63.0.1540.902" timestamp="1597501815613" />
     <state x="310" y="118" key="IDE.errors.dialog" timestamp="1597242467242">
       <screen x="63" y="0" width="1540" height="902" />
     </state>
     <state x="310" y="118" key="IDE.errors.dialog/63.0.1540.902@63.0.1540.902" timestamp="1597242467242" />
-    <state x="129" y="0" width="1247" height="883" key="SettingsEditor" timestamp="1597324833291">
-      <screen x="63" y="0" width="1540" height="902" />
+    <state x="82" y="27" width="1247" height="883" key="SettingsEditor" timestamp="1598586081380">
+      <screen x="0" y="27" width="1920" height="1053" />
     </state>
+    <state x="82" y="27" key="SettingsEditor/0.27.1920.1053@0.27.1920.1053" timestamp="1598586081380" />
     <state x="129" y="0" width="1247" height="883" key="SettingsEditor/63.0.1540.902@63.0.1540.902" timestamp="1597324833291" />
+    <state width="240" height="71" key="documentation.popup.size" timestamp="1598586095950">
+      <screen x="0" y="27" width="1920" height="1053" />
+    </state>
+    <state width="240" height="71" key="documentation.popup.size/0.27.1920.1053@0.27.1920.1053" timestamp="1598586095950" />
+    <state x="540" y="250" key="run.anything.popup" timestamp="1598584419151">
+      <screen x="0" y="27" width="1920" height="1053" />
+    </state>
+    <state x="540" y="250" key="run.anything.popup/0.27.1920.1053@0.27.1920.1053" timestamp="1598584419151" />
+    <state x="517" y="45" key="search.everywhere.popup" timestamp="1598584417931">
+      <screen x="0" y="27" width="1920" height="1053" />
+    </state>
+    <state x="517" y="45" key="search.everywhere.popup/0.27.1920.1053@0.27.1920.1053" timestamp="1598584417931" />
   </component>
 </project>

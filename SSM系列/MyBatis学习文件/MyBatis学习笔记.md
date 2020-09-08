@@ -13,7 +13,7 @@
 - MyBatis 免除了几乎所有的 JDBC 代码以及设置参数和获取结果集的工作。
 - MyBatis 可以**通过简单的 XML 或注解**来配置和映射原始类型、接口和 Java POJO（Plain Old Java Objects，普通老式 Java 对象）为数据库中的记录。
 - 原身是Apache的一个开源项目iBatis。
-- 2010迁移到Google code 并改名为MyBatis，2013年11月迁移到GitHub
+- 2010迁移到Google code  并改名为MyBatis，2013年11月迁移到GitHub
 
 ### 2、获取MyBatis
 
