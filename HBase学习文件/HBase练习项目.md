@@ -428,6 +428,59 @@ public static void addAttention(String uid, String... attentions) throws IOExcep
 
 
 ```java
+public static void cancelAttention(String uid, String... cancels) throws IOException {
+    Connection connection = ConnectionFactory.createConnection(Constants.CONFIGURATION);
+    /**
+     * 第一部分：删除用户关系
+     */
+    // 获取用户关系表
+    Table relationTable = connection.getTable(TableName.valueOf(Constants.RELATION_TABLE));
 
+    // 创建一个操作者的删除对象
+    Delete operatorDel = new Delete(uid.getBytes());
+
+    // 创建一个List存放所有的Delete对象
+    ArrayList<Delete> delList = new ArrayList<>();
+
+    // 遍历取关的用户并为其创建Delete对象 并加入List
+    for (String cancel : cancels) {
+        // 从操作者的关注列表中移除 注意！！！保险起见使用addColumns！！
+        operatorDel.addColumns(Constants.RELATION_TABLE_CF1.getBytes(), cancel.getBytes());
+
+        // 创建被取关者的Delete对象
+        Delete canceledDel = new Delete(cancel.getBytes());
+        // 从fans列表中删除操作者
+        canceledDel.addColumns(Constants.RELATION_TABLE_CF2.getBytes(), uid.getBytes());
+        delList.add(canceledDel);
+    }
+    delList.add(operatorDel);
+    // 执行删除
+    relationTable.delete(delList);
+
+    /**
+     * 第二部分： 清理操作者的inbox表
+     */
+    // 创建操作者的inbox表的Delete对象
+    Delete inboxDel = new Delete(uid.getBytes());
+    // 遍历被取关的用户
+    for (String cancel : cancels) {
+        // 删除对应取关用户的收件箱
+        inboxDel.addColumns(Constants.INBOX_TABLE_CF.getBytes(), cancel.getBytes());
+    }
+
+    // 校验Delete对象是否为空
+    if (!inboxDel.isEmpty()) {
+        // 获取收件箱表
+        Table inboxTable = connection.getTable(TableName.valueOf(Constants.INBOX_TABLE));
+        // 执行删除
+        inboxTable.delete(inboxDel);
+        // 关闭表
+        inboxTable.close();
+    }
+
+    // 释放其他资源
+    relationTable.close();
+    connection.close();
+}
 ```
 

@@ -1016,9 +1016,897 @@ object LazyFunc {
 
 Java中的编译时异常和运行时异常，被Scala统一为运行时异常！！
 
+> 案例对比
+
+Scala顺势沿用了Java所有的异常类型。
+
+我们先来回顾一下Java中try…catch捕获异常的一些规则
+
+```java
+public class ExceptionTest {
+    public static void main(String[] args) {
+
+        try {
+            // ...
+        } catch (ArithmeticException | NumberFormatException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // ...
+        }
+        
+    }
+}
+```
+
+try中放可疑代码块，finally里面存放后续执行代码（例如资源释放等）无论如何都会运行。而在Catch中：==每个Catch可以对没有子父类关系的多个异常进行同样的处理（例如上述代码中的第一个Catch）。**Catch的异常范围必须按从小到大范围来写，否则直接报错！**==
 
 
 
+现在我们来看看Scala捕获异常的代码：
+
+```scala
+object ExceptionDemo01 {
+  def main(args: Array[String]): Unit = {
+    
+    try {
+      var i:Int = 10 / 0
+    } catch {
+      case exception: Exception => {
+        println("捕获到一个异常")
+      };
+      case exception: ArithmeticException|NumberFormatException => println("捕获到一个算数异常")
+    } finally {
+      // ...
+    }
+      
+    
+  	try {
+      exceptionFunc()
+    } catch {
+      case ex: Exception => println("捕获到异常:" + ex.getMessage)
+    }
+    println("continue")
+  }
+
+
+  /**
+   * 模拟异常
+   */
+  def exceptionFunc (): Unit = {
+    throw new Exception("异常出现～～～")
+  }
+}
+```
+
+try和finally代码块都没有什么区别，对比一下Catch代码块就能看到不同。Scala可以直接使用一个Catch然后分多个case来代替Java中的多个Catch。==并且case之间的异常范围顺序没有硬性要求，但是最终还是会**模式匹配**到最适合的case（例如上述代码还是走第二个case！），但是为了编码的规范性和代码的可读性，**还是建议按照异常的范围来顺序设置case!!**==
+
+
+
+> 异常处理的注意点
+
+1. 可疑代码块放在try代码块中！使用catch捕获可能出现的异常
+2. Catch中异常的case，最好按照编码规范：范围更大的异常放到最后
+3. finally代码块一般用于资源的释放，此外的代码是无论如何都会执行的！！
+4. 遇到不处理的异常可以继续使用throw继续向上抛出！
+
+
+
+> @throw注解
+
+刚才在Scala的案例代码中，我们使用throw关键字手动抛出异常，我们还可以使用`@throw`注解告诉调用者这个方法会抛出的异常，需要调用者catch处理或者继续抛出！
+
+```scala
+@throws(classOf[ArithmeticException])
+@throws(classOf[NumberFormatException])
+def exceptionFunc02(): Unit = {
+    var i: Int = "abc".toInt
+    var a: Int = 10 / 0
+}
+```
+
+
+
+## Chap06. Scala面向对象
+
+### 6.1、面向对象基础要点
+
+前面我们创建的都是object，但是在面向对象编程过程中，我们使用的类都是使用`class`定义的。相比于Java而言Scala是纯面向对象的！但是两者的编码规范上还是稍有不同！
+
+```scala
+object TestOOP {
+  def main(args: Array[String]): Unit = {
+    val tom:Cat = new Cat
+    println(tom.name) // null
+    println(tom.age)  // 0
+
+    tom.name = "tom"
+    tom.age = 3
+    tom.color = "orange"
+    
+    println("----赋值后：----")
+    println(tom.name) // tom
+    println(tom.age)  // 3
+  }
+}
+
+class Cat {
+  var name:String = _
+  var age:Int = _
+  var color:String = _
+
+  def speak (): Unit = {
+    println("miao~")
+  }
+}
+```
+
+在class对象的定义的时候，==成员属性必须赋默认值！！==这里使用`_`表示赋对应值类型的空值。
+
+**问题：这种写法成员变量访问权限修饰是private还是public呢？**
+
+直接来看反编译文件：
+
+通过编译的文件看出来，这个class对象单独生成了一个.class文件，而object对象编译后却有两个.class文件！
+
+![image-20200910153738173](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20200910153738173.png)
+
+来看看这个class对象化为Java代码的样子吧
+
+```java
+public class Cat {
+  private String name;
+  
+  private int age;
+  
+  private String color;
+  
+  public String name() {
+    return this.name;
+  }
+  
+  public void name_$eq(String x$1) {
+    this.name = x$1;
+  }
+  
+  public int age() {
+    return this.age;
+  }
+  
+  public void age_$eq(int x$1) {
+    this.age = x$1;
+  }
+  
+  public String color() {
+    return this.color;
+  }
+  
+  public void color_$eq(String x$1) {
+    this.color = x$1;
+  }
+  
+  public void speak() {
+    Predef$.MODULE$.println("miao~");
+  }
+}
+```
+
+1. 所有的成员变量都是`private`修饰的！
+2. 每个成员变量貌似都对应两个public方法 xxx()和 xxx_$eq(…)（类似于JavaBean里面的getter和setter）
+
+这种写法是规范的JavaBean定义方式
+
+
+
+我们再来看看main方法中的对象赋值和取值是怎么实现的吧：
+
+![image-20200910154454330](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20200910154454330.png)
+
+和前面设想的一致，==成员变量都会自动生成“getter and setter”方法==
+
+**class不添加修饰默认是public!**
+
+
+
+### 6.2、对象、属性定义的注意点
+
+成员属性的定义标准语法：
+
+`[访问修饰符] var 属性名[:属性值类型] = 默认值`
+
+修饰符省略，默认为private！！
+
+> 属性赋默认值时需要注意的问题
+
+1. 成员属性定义时必须设置默认值！
+
+2. 属性值类型可以省略，根据赋的默认值自动推断，但是==不设置类型，赋值null的话，会将成员属性自动推导为Null类型对象，后续为此成员属性赋值的时候会出现麻烦！！==
+
+   ```scala
+   class Cat {
+       var name = null
+   }
+   // name成员属性自动推断为Null类型，后续无法赋值！
+   ```
+
+3. 如果实在不想设置默认值，可以使用`_`（系统默认值）
+
+   |          类型          | 系统默认值（ _ ） |
+   | :--------------------: | :---------------: |
+   | Short、Byte、Int、Long |       **0**       |
+   |     Double、Float      |      **0.0**      |
+   |  String、其他引用类型  |     **null**      |
+   |        Boolean         |     **false**     |
+
+   **使用这种方式赋默认值的话，就不能省略成员类型！！**
+
+
+
+
+
+> 对象创建注意点
+
+1. var、val合理使用
+
+2. 当引用类型对象创建的时候，对象本身和创建的对象存在父子类关系或者多态关系，对象的类型必须带上。（**当一个子类对象要赋值给一个父类引用时，想要保证引用的类型不变需要指定类型！**）
+
+3. 对象内存布局（与Java类似）
+
+   ==栈中只存放对象的引用，即对象在堆中的内存地址。访问对象时先获取对象所在的堆内存地址，然后到堆中找到对应内存取出对象数值。==
+
+   ![image-20200910165056609](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20200910165056609.png)
+
+
+
+
+
+### 6.3、构造器
+
+在Scala中构建类对象一样需要使用构造器。
+
+在Java中构造器的定义使用类名，并且不写返回值类型，支持重载！
+
+但是在Scala中，构造器分为两种：
+
+- 主构造器
+- 辅助构造器
+
+而且定义方式也与Java有些区别！
+
+
+
+> 主构造器定义
+
+直接在类定义时候，类名后用括号包裹主构造器的参数：
+
+```scala
+object TestConstructor {
+  def main(args: Array[String]): Unit = {
+    val p1:Person = new Person("sakura",20)
+    println(p1)
+  }
+}
+
+class Person (inName:String, inAge:Int) {
+  var name:String = inName
+  var age:Int = inAge
+
+  override def toString: String = {
+    "name: " + name + "; age: " + age
+  }
+}
+```
+
+这里有点和Java不同，在Java中类中的代码都必须是在方法中或者静态代码块中的，，但是**Scala中的class里面，不在方法中的代码统统归为主构造器的执行代码！**例如：
+
+```scala
+class Person (inName:String, inAge:Int) {
+  var name:String = inName
+  var age:Int = inAge
+  
+  println("调用了主构造器")
+  
+  override def toString: String = {
+    "name: " + name + "; age: " + age
+  }
+  
+  println("构造完成！")
+}
+```
+
+这两句输出代码都是直接写在类中的，也就是说被归到了主构造器的执行代码中，每次调用主构造器都会执行！我们来看看反编译的Java代码=>
+
+<img src="https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20200921152756401.png" alt="image-20200921152756401" style="zoom: 80%;" />
+
+==注意：当主构造器为空参的时候，括号可以省略，调用的时候也可以省略！===
+
+
+
+
+
+> 辅助构造器
+
+Scala允许一个类有多个辅助构造器，所有的构造器都是重载的关系。Java中重载构造器保证参数列表不同即可。但是Scala中辅助构造器有些需要注意的地方：
+
+1. 命名使用`this` 
+2. 必须在第一行直接或者间接调用到主构造器！
+3. 调用主构造器需要显式调用！（主要是为了和父类建立联系，而Java的构造器基本都会默认隐式调用super!）
+
+
+
+Java的类构造器中一般都会隐式调用父类的空参的构造，即`super()`，或者你也可以添加参数来指定调用父类的具体某个构造器，例如`super(?,?,?)` 这其实就是和父类建立起联系的方式！ 但是当你在构造器的第一行调用了同类的其他重载构造即`this(?,?,..)`，最终去执行这个重载的构造的时候第一行执行的还是父类构造的调用！
+
+```java
+public class Person {
+    private int age;
+    private String name;
+
+    public Person (){
+
+    }
+
+    public Person (String  inName){
+        // super(); 默认调用，可省略
+        this.name = inName;
+        this.age = 20;
+    }
+
+    public Person (String inName, int inAge) {
+        // 这里调用了同类的重载构造，最终还是会调用super();
+        this(inName);
+        this.age = inAge;
+    }
+
+}
+```
+
+可是当调用了重载的构造，又紧接着调用super()，这样是不允许的：
+
+```java
+public Person (String inName, int inAge) {
+        // 这里调用了同类的重载构造，最终还是会调用super();
+        this(inName);
+    	super(); // 这里直接报错！！
+        this.age = inAge;
+    }
+```
+
+**因为对父类的构造调用必须在第一行执行！！**所以你这样写，无论是写在前面还是后面，总有一个`super()`不是第一行执行！
+
+
+
+
+
+我们再说回Scala，在Scala中是没有这种默认隐式调用父类构造的，只有主构造器才能和父类联系！所以所有的辅助构造器就需要最终调到主构造器，否则无法和父类建立联系。
+
+所以在Java中这种写法，在Scala中行不通=》
+
+```scala
+class Person (inName:String, inAge:Int) {
+  var name:String = inName
+  var age:Int = inAge
+
+  println("调用了主构造器")
+
+  override def toString: String = {
+    "name: " + name + "; age: " + age
+  }
+
+  println("构造完成！")
+  
+  // 错误写法！！但是Java可以！对比上面Java案例代码的第二个构造器
+  def this(inName:String) {
+    name = inName
+    age = 18
+  }
+
+}
+```
+
+究其原因就是没有调用主构造器和父类产生联系，所以正确写法应该是=》
+
+```scala
+class Person (inName:String, inAge:Int) {
+  var name:String = inName
+  var age:Int = inAge
+
+  println("调用了主构造器")
+
+  override def toString: String = {
+    "name: " + name + "; age: " + age
+  }
+
+  println("构造完成！")
+  
+  // 正确写法，先调用主构造！
+  def this(inName:String) {
+    this(inName, 18)
+  }
+}
+```
+
+或者这样：
+
+```scala
+class Person (inName:String, inAge:Int) {
+  var name:String = inName
+  var age:Int = inAge
+
+  println("调用了主构造器")
+
+  override def toString: String = {
+    "name: " + name + "; age: " + age
+  }
+
+  println("构造完成！")
+
+  def this() {
+    this("sakura",20)
+    println("空参构造")
+  }
+
+  def this(inName:String) {
+    // 调用了空参的辅助构造，间接调用主构造
+    this
+    name = inName
+  }
+}
+```
+
+这种间接调用到主构造也是可以的！！**反正目的只有一个：调到主构造，并且在第一行执行！！**
+
+
+
+> 其他注意点
+
+**构造器私有化**
+
+主构造器私有化：在参数列表之前加上`private`
+
+```scala
+class Person private(inName:String, inAge:Int){
+    // ...
+}
+```
+
+辅助构造器私有化：def之前加上private
+
+```scala
+private def this() {
+    this("sakura",20)
+    println("空参构造")
+}
+```
+
+**辅助构造器不要出现与主构造器同参定义！！**
+
+
+
+
+
+### 6.4、属性高级部分
+
+**在Scala的主构造方法中，使用var（val）定义形参，可以将形参转化为类的成员变量**（var定义的为可读可写 val定义的为只读）可以通过反编译验证。
+
+```scala
+// 将形参inName变为了Student的一个可读可写成员变量,inAge是只读的！
+class Student (var inName:String,val inAge:Int) {
+  var name:String = inName
+  var age:Int = inAge
+}
+
+object TestConstructor {
+  def main(args: Array[String]): Unit = {
+    
+    val s1:Student = new Student("sakura",20);
+    println(s1.inName)
+    s1.inName = "xiaohua"
+//    s1.inAge = 19  错误用法，用val定义的inAge为只读的
+    println(s1.inAge)
+  }
+}
+```
+
+反编译的代码：
+
+![image-20200921180725676](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20200921180725676.png)
+
+
+
+> Getter和Setter
+
+和Java的类成员变量一样，Scala的成员变量也可以写get和set方法，和默认生成的`xxx()`、`xxx_$eq(..)`互不影响。
+
+Scala提供的是更便捷的方式——注解标注。`@BeanProperty`
+
+```scala
+class Student (var inName:String,val inAge:Int) {
+  @BeanProperty 
+  var name:String = inName
+  @BeanProperty
+  var age:Int = inAge
+}
+```
+
+`@BeanProperty`注解直接使用在成员变量上。就会自动生成get、set方法，在后续创建的对象中可以直接调用！我们通过反编译来验证：
+
+![image-20200925142009220](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20200925142009220.png)
+
+
+
+其实发现最终还是调用默认生成的那两个方法！
+
+
+
+
+
+## Chap07. Scala包
+
+### 7.1、Scala包基本介绍
+
+Scala和Java具有相同的包机制,但是Scala中包机制要较为复杂，并且功能也更强大！！
+
+> package的主要功能
+
+说到底，包的作用大部分是为了区分同名的类，包名的存在就解决了项目中类同名的问题！就好像文件夹的出现，解决了文件系统的文件同名的问题。（同名文件在不同的文件夹中不会产生冲突！）
+
+
+
+### 7.2、Scala包的特点及注意事项
+
+> 特点一：包结构可以与文件结构不同
+
+==在Java中项目包的结构是对应文件系统的结构的！==（例如：com.sakura.java包 对应到文件系统就是 …./com/sakura/java/文件夹）
+而在Scala中就没有这么严格哦！！来看看例子吧
+
+代码是这样的：
+
+```scala
+package com.sakura.chapter07.demo
+
+/**
+ * @author sakura
+ * @date 2020/9/25 下午4:39
+ */
+object TestPackage {
+  def main(args: Array[String]): Unit = {
+    println("Hello World")
+  }
+}
+```
+
+注意package是 `com.sakura.chapter07.demo`但是项目结构中根本就不存在这个包！！
+
+![image-20200925164259306](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20200925164259306.png)
+
+
+
+你敢在Java中这么写，编译器就直接报错给你看！但是Scala允许了，但是我们来看看文件系统的结构：
+
+![image-20200925164454561](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20200925164454561.png)
+
+文件系统中还是老老实实创建了！！那我们改动一下代码上的package为`com.sakura.chapter.demo02`看看会发生什么？！
+
+项目包结构还是那个样，但是文件系统中demo文件夹被删除，随之创建了demo2文件夹。
+
+
+
+
+
+> 特点二：包的写法有多种
+
+在Java中，包名都是写在文件的第一行的！
+
+```java
+package xx.yy.zz
+...
+```
+
+这种写法在Scala中也被保留了！但是扩展了另一种等价的写法：
+
+```scala
+package xx.yy
+package zz
+....
+```
+
+还有一种更特殊的写法，这种写法完全颠覆了传统Java包的书写规范！
+
+==居然可以在一个类文件中，同时存在多个包，并且分别编写各个包的类！！==
+
+```scala
+package xx.yy {
+    class Car {
+        // ...
+    }
+    
+    package zz {
+        class Car {
+            
+        }
+    }
+    
+   	// ...
+}
+
+package aa.bb {
+    // ...
+    class Car {
+        
+    }
+}
+```
+
+包名后使用大括号包裹内容，划定包的内容范围。并且可以在同一个项目类中同时存在多个包（非嵌套式）！！但是通过编译之后，编译器会自动处理在文件系统中创建对应的包文件夹，每个类单独生成一个class文件！
+
+
+
+### 7.3、包对象package object
+
+刚才看完Scala包和Java包的区别，现在要学习一个Scala中特有的一个东西——**包对象（package object）**。这个包对象，和我们创建的包之间又有什么关系呢？！
+
+
+
+> 为什么有包对象？有什么作用？
+
+在Java中，所有的变量、方法都必须写在class中，而package里面只能有class的定义，package中是不能定义变量和方法的。当然scala中的package也是。于是Scala引出了包对象的概念。==目的就是可以在package中定义变量和方法，并且这些变量和方法，是当前包下随处可用的！！==
+
+
+
+> 创建包对象
+
+使用package object声明,  包对象的名字和与之作用的包名保持一致即可，例如
+
+```scala
+package sakura{
+
+}
+
+package object sakura {
+
+}
+```
+
+当然在package下还是不能写变量和方法的。定义变量和方法都在package object下进行！
+
+
+
+> 测试使用package object
+
+```scala
+package object sakura {
+  val name = "sakura"
+  var age = 20
+
+  def sayHi () = {
+    println("Hello World")
+  }
+}
+
+package sakura{
+
+  object TestSakura {
+    def main(args: Array[String]): Unit = {
+      // 直接使用package object中的方法和变量
+      println("info-> {" + s"name : $name" + s", age : $age}")
+      sayHi()
+
+      println("-----------")
+
+      val root:User = new User
+      println(s"username: ${root.username}" + s", age: ${root.user_age}")
+      print("User.sendMessage() => ")
+      root.sendMessage
+    }
+  }
+
+  // 包内随处可用
+  class User {
+    val username = name
+    var user_age = age
+
+    def sendMessage: Unit = {
+      sayHi()
+    }
+  }
+
+}
+```
+
+上面这个例子中，在package object中定义的变量和方法，在其作用的package中随处可用，emmm，有点像java中class下定义的变量和方法，在class中也是随处可用！
+
+
+
+> 反编译，查看实现过程
+
+查看反编译的Java代码，看看是如何实现的：
+
+![image-20201003220858341](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201003220858341.png)
+
+
+
+首先是创建了名为`package$` 和 `package`的类
+
+方法和变量定义都是在`package$`类中的，并且其给出了一个实例`MODULE$`便于其他位置调用类中的属性和方法。
+
+
+
+![image-20201003221439980](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201003221439980.png)
+
+可以看出，其底层的实现只是利用了一个类似于定义工具类的方式，并不高深。。
+
+
+
+> 注意事项
+
+1.  **每个package至多有一个package object**
+2.  package object的**命名必须与包名一致！**
+3. package和package object**必须在同级包下定义！！（同一个父包）**
+
+
+
+
+
+### 7.4、访问权限
+
+先回顾一下Java的访问权限修饰符：
+
+|  访问权限  |  修饰符   | 同类 | 同包 | 子类 | 不同包 |
+| :--------: | :-------: | :--: | :--: | :--: | :----: |
+|    公共    |  public   |  ✅   |  ✅   |  ✅   |   ✅    |
+|  受保护的  | protected |  ✅   |  ✅   |  ✅   |  :x:   |
+| 不写，默认 |    无     |  ✅   |  ✅   | :x:  |  :x:   |
+|    似有    |  private  |  ✅   | :x:  | :x:  |  :x:   |
+
+
+
+注意一下：这里的受保护的（protected）对子类是开放的！**就算子类在不同包下也是可以的！**
+
+
+
+> 伴生对象和伴生类
+
+在了解Scala的访问权限之前，有必要知道这两个东西。`companion object`和`companion class`。
+
+例如：
+
+```scala
+object Test {
+    
+}
+
+class Test {
+    
+}
+```
+
+这种情况，我们称`object Test`是`class Test`的伴生对象，编译后成为`Test$.class`文件。
+`class Test`为`object Test`的伴生类，编译后为`Test.class`文件。
+
+
+
+**这俩东西出现的意义是什么呢？**
+
+在Scala设计过程中，抛弃了`static`关键字，但是静态成员、静态代码块又是常用的。于是规定将静态成员、方法、代码块都写在`伴生对象`中，实例成员写在`伴生类`中。
+
+
+
+现在我们给出一段案例的Java代码：
+
+```java
+class Student {
+    static {
+        System.out.println("创建了一个学生");
+    }
+    
+    public static int count = 56;
+    
+    private String name;
+    private String id;
+    
+    public Student(String name,String id) {
+        this.name = name;
+        this.id = id;
+    }
+    
+    public static void sayHi() {
+        System.out.println("你好，我是一名学生！");
+    }
+    
+    public void introduce() {
+        System.out.println("My Name Is " + name + ", And My Id Is " + id);
+    }
+}
+```
+
+像这样一个简单的Java类，其中包含了静态变量、静态代码块和静态方法，这些都隶属于这个class，而不属于某一个实例。同时还有两个成员变量以及一个成员方法，这些是与实例对象紧密关系的，只能通过实例化的对象调用或者修改。
+
+
+
+现在我们要改写成scala代码，由于没有static关键字，所以静态部分要放到伴生对象中…  开干开干！！
+
+```scala
+object Student {
+  println("创建了一个学生")
+
+  var count:Int = 56
+
+  def sayHi: Unit = {
+    println("你好，我是一名学生！")
+  }
+}
+
+class Student(inName:String, inId:String) {
+  var name:String = inName
+  var id:String = inId
+
+  def introduce: Unit = {
+    println("My Name Is " + name + ", And My Id Is " + id)
+  }
+}
+```
+
+> 注意！！这样改写，存在一个小小的点，就是在编译后会生成两个.class文件。`Student$.class`和`Studnet.class`
+>
+> 而我们在伴生对象（object Studnet）中写的那句输出，变成了Student$.class的静态代码块！
+>
+>  ![image-20201004232454954](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201004232454954.png)
+>
+>  
+>
+> 但是我们使用new创建Student对象的时候，并不涉及到静态部分的创建，所以理所当然也就摸不到`Student$.class`，所以这句输出也就不会输出。但是在Java中，实例化类的时候第一件事就是执行静态代码块。所以你要是想看到这句输出，必须是在访问/修改静态部分的时候！例如:
+>
+> ```scala
+> object Test {
+>   def main(args: Array[String]): Unit = {
+>     
+>     val s1:Student = new Student("Sakura","18130311") // 不输出
+>     
+>     println(Student.count) // 输出，因为访问了静态变量count
+>   }
+> }
+> ```
+
+
+
+**伴生类和伴生对象内容访问：**
+
+- 伴生类访问伴生对象中的内容，使用`类名.变量`  ` 类名.方法`。
+- 伴生对象访问伴生类中的内容，必须通过实例化对象。
+
+
+
+仔细体会一番，可以看出Scala中将类的静态部分和实例成员部分完完整整分离开来。但是使用起来还是和Java类似，当然也就牺牲了部分代码的易读性。我想可能这就是Scala作为纯面向对象语言做出的妥协和牺牲吧。
+
+-----
+
+
+
+现在我们继续来学习Scala中的访问权限控制。。
+
+学习了这么久的Scala，是不是发现我们已经很少写public、private这种访问权限关键字了？！这是因为Scala中变量、方法都是有默认的访问权限的！！
+
+- `变量`默认为`private`
+
+  > 这里随说变量默认是private，但是默认生成了一套类似的getter/setter的方法，在外部依然可以通过这两个public方法访问/修改。
+  >
+  > 但是！！**如果你显式使用private修饰，这一套getter/setter就变成了private的，也就保证了外部也调不到！**
+
+- `方法`默认为`public`
+
+还有几个特别重要的注意点！
+
+- **Scala中没有public关键字！！！**
+- Scala中的`protected`相较于Java要更为严格！**只允许同类、子类访问**
+
+
+
+在Scala中还有一个非常灵活的控制访问权限的方式，看代码！
+
+```scala
+
+```
 
 
 
