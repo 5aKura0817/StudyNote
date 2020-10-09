@@ -1905,7 +1905,173 @@ class Student(inName:String, inId:String) {
 在Scala中还有一个非常灵活的控制访问权限的方式，看代码！
 
 ```scala
+package com.sakura.chapter07
 
+class Student(inName:String, inId:String) {
+  private[aa] var name:String = inName
+  private var id:String = inId
+
+  def introduce: Unit = {
+    println("My Name Is " + name + ", And My Id Is " + id)
+  }
+}
+
+
+package aa {
+  object test {
+    val s1 = new Student("sakura", "18130311")
+    s1.name // 可以访问
+    s1.id // 拒绝访问
+  }
+}
+```
+
+此处代码中`Student`是写在`com.sakura.chapter07`包下的，但是我们在写Student类的成员变量name的时候访问修饰使用的是`private[aa]`这种特殊写法。这中写法有什么特殊呢？我们继续往下看。
+
+默认情况下private修饰的变量只能在同类下使用！也就是按理说name和id只能在Student这个class内部使用，外部是无法访问的！即`s1.name`和`s1.id`这种都是拒绝访问的。
+
+但是！但是！偏偏就是`private[aa]`这种写法，让访问权限的控制更加灵活。在`aa`这个package下我们创建的Student对象，居然奇迹地访问到了对象内部的成员变量name！但是由于id并没有使用这种方式，被拒绝访问！**相当于是给某个包开了“后门”。**当然这种后门是可以延续到子包中的！
+
+
+
+### 7.5、高级版Import
+
+想比较Java的Import，在Scala中import的功能更加强大，使用起来也更加灵活便捷！
+
+> 出现的位置更灵活
+
+**Java中import只能出现在package之后 class之前**，但是在Scala中import出现的位置就比较随意，并且import是有作用范围的！上代码！
+
+```scala
+object TestImport {
+  
+  object testA {
+    import java.util.HashMap
+    val map = new HashMap
+  }
+  
+  object testB {
+    val map = new HashMap // 必须导包
+  }
+    
+}
+```
+
+很明显我们的`import java.util.HashMap`作用范围只在object testA这个大括号内！其他地方要用的话，就必须再导入一次。但是这样就方便一丢丢
+
+```scala
+object TestImport {
+  import java.util.HashMap
+  
+  object testA {
+//    import java.util.HashMap
+    val map = new HashMap
+  }
+
+  object testB {
+    val map = new HashMap
+  }
+
+}
+```
+
+所以说把握好import作用范围非常重要。
+
+
+
+> 导入选择器
+
+是不是很新鲜！！在Java中我们导入一个包下的某几个类的时候，需要写多个import，老烦了（好在IDEA可以自动导入。。）但是在Scala中我们可以使用导入选择器**一个import就可以将一个包里的多个类同时导入！！**
+
+```scala
+object TestImport {
+
+  object testA {
+    
+    import java.util.{HashMap,ArrayList,HashSet} // 一个import导入三个类！
+
+    val map = new HashMap[Int,String]
+    val list = new ArrayList[String]
+    val set = new HashSet[String]
+    
+  }
+}
+```
+
+使用方式：`import xx.xxx.{xxA, xxB, xxC, ...}`大括号内写选择要导入的类。
+
+
+
+
+
+> 导入时类重命名
+
+我们偶尔在导包的时候会遇到要导入的类中存在类重名的情况。在使用的时候为了解决冲突前面还要加上包名。像这样=>
+
+```scala
+object TestImport {
+  
+  object testA {
+
+    import java.util.HashMap
+    import scala.collection.mutable.HashMap
+
+    val map = new java.util.HashMap[Int, String]()
+    val map1 = new scala.collection.mutable.HashMap[Int, String]()
+    
+  }
+}
+```
+
+在Scala中，我们可以在import的时候使用重命名的方式来解决。
+
+```scala
+object TestImport {
+
+  object testA {
+
+    import java.util.{HashMap => MyMap}
+    import scala.collection.mutable.HashMap
+
+    val map = new MyMap[Int, String]()
+    val map2 = new HashMap[Int, String]()
+
+  }
+}
+```
+
+对比上面可以看到在导入java.util.HashMap的时候，我们使用`{HashMap => MyMap}`将其重命名为`MyMap`。并且后续使用的时候，也将MyMap作为java.util.HashMap的别名使用。很好的解决了重名冲突的问题！
+
+
+
+> 排除无用的冲突
+
+在此之前有一个注意点！要导入某个包内的所有类不是像java中使用`import xx.xx.*`这种方式（用*表示通配所有）。而是使用`import xx.xx._`（使用`_`通配）。
+
+
+
+回到正题，在解决上面说到的重名冲突的时候，我们会发现有些冲突是可以在导入时候通过**排除无用类的导入**避免掉的。比如我想用`scala.collection.mutable.HashMap`同时又要用到`java.util`包下的大部分类（除了HashMap）。那么我们这样写：
+
+```scala
+import java.util._
+import scala.collection.mutable.HashMap
+```
+
+就会产生重名冲突，既然java.util.HashMap我们用不到，能不能在导入阶段就排除他不导入呢？当然是可以的！！写法如下：
+
+```scala
+object TestImport {
+
+  object testA {
+
+    import java.util.{HashMap => _, _} //导入java.util包下的所有成员类，但是排除java.util.HashMap类
+    import scala.collection.mutable.HashMap
+
+    val list = new ArrayList[Int]()
+    val map2 = new HashMap[Int, String]()
+
+  }
+}
 ```
 
 

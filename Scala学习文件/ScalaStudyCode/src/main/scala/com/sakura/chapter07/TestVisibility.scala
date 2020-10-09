@@ -46,10 +46,18 @@ object Student {
 }
 
 class Student(inName:String, inId:String) {
-  private var name:String = inName
+  private[a] var name:String = inName
   private var id:String = inId
 
   def introduce: Unit = {
     println("My Name Is " + name + ", And My Id Is " + id)
+  }
+}
+
+
+package a {
+  object test {
+    val s1 = new Student("sakura", "18130311")
+    s1.name
   }
 }

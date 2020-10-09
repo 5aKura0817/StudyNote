@@ -34,10 +34,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9b90fa23-0d06-4192-a8c9-95cd7d391dac" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../../HBase学习文件/HBase练习项目.md" beforeDir="false" afterPath="$PROJECT_DIR$/../../HBase学习文件/HBase练习项目.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/sakura/Test.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/sakura/Test.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/scala/com/sakura/chapter07/TestVisibility.scala" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/scala/com/sakura/chapter07/TestVisibility.scala" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Scala学习笔记.md" beforeDir="false" afterPath="$PROJECT_DIR$/../Scala学习笔记.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -105,7 +103,7 @@
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.2" />
     <property name="scala_project_settings_configurable.last_selected_tab_index" value="7" />
-    <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
+    <property name="settings.editor.selected.configurable" value="editor.preferences.import" />
   </component>
   <component name="RunManager" selected="Application.Demo2">
     <configuration name="Demo2" type="Application" factoryName="Application" temporary="true">
@@ -173,15 +171,13 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration default="true" type="ArquillianTestNG" factoryName="" nameIsGenerated="true">
+    <configuration default="true" type="ArquillianJUnit" factoryName="" nameIsGenerated="true">
       <option name="arquillianRunConfiguration">
         <value>
           <option name="containerStateName" value="" />
         </value>
       </option>
-      <option name="TEST_OBJECT" value="CLASS" />
-      <properties />
-      <listeners />
+      <option name="TEST_OBJECT" value="class" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -227,6 +223,7 @@
       <workItem from="1601732740669" duration="1349000" />
       <workItem from="1601782418225" duration="668000" />
       <workItem from="1601820839965" duration="6333000" />
+      <workItem from="1602239049071" duration="5737000" />
     </task>
     <servers />
   </component>
@@ -341,11 +338,11 @@
       <screen x="63" y="0" width="1540" height="902" />
     </state>
     <state x="310" y="118" key="IDE.errors.dialog/63.0.1540.902@63.0.1540.902" timestamp="1597242467242" />
-    <state x="151" y="92" width="1280" height="909" key="SettingsEditor" timestamp="1601018868726">
+    <state x="208" y="92" width="1280" height="923" key="SettingsEditor" timestamp="1602261551835">
       <screen x="0" y="30" width="1920" height="1050" />
     </state>
     <state x="82" y="27" width="1514" height="1053" key="SettingsEditor/0.27.1920.1053@0.27.1920.1053" timestamp="1599728620607" />
-    <state x="151" y="92" width="1280" height="909" key="SettingsEditor/0.30.1920.1050@0.30.1920.1050" timestamp="1601018868726" />
+    <state x="208" y="92" width="1280" height="923" key="SettingsEditor/0.30.1920.1050@0.30.1920.1050" timestamp="1602261551835" />
     <state x="129" y="0" width="1247" height="883" key="SettingsEditor/63.0.1540.902@63.0.1540.902" timestamp="1597324833291" />
     <state width="240" height="71" key="documentation.popup.size" timestamp="1598586095950">
       <screen x="0" y="27" width="1920" height="1053" />
