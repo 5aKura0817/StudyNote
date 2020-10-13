@@ -35,8 +35,6 @@
   <component name="ChangeListManager">
     <list default="true" id="9b90fa23-0d06-4192-a8c9-95cd7d391dac" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/scala/com/sakura/chapter07/TestVisibility.scala" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/scala/com/sakura/chapter07/TestVisibility.scala" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Scala学习笔记.md" beforeDir="false" afterPath="$PROJECT_DIR$/../Scala学习笔记.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -223,7 +221,7 @@
       <workItem from="1601732740669" duration="1349000" />
       <workItem from="1601782418225" duration="668000" />
       <workItem from="1601820839965" duration="6333000" />
-      <workItem from="1602239049071" duration="5737000" />
+      <workItem from="1602239049071" duration="6414000" />
     </task>
     <servers />
   </component>
