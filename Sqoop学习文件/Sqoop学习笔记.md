@@ -117,7 +117,7 @@ Sqoop是一款开源的数据传输工具！**主要用于Hadoop(Hive)和传统�
 
 # 三、案例学习
 
-## 案例一、数据导入
+## 案例一、数据导入到HDFS
 
 **前置知识提要**：
 
@@ -320,3 +320,190 @@ sqoop import \
   > 官方文档原话：
   >
   > *在Sqoop的当前版本中，使用自由形式查询的便利仅限于在where子句中没有模糊投影和`OR`条件的简单查询。使用复杂查询(如具有子查询或连接的查询)导致不明确的投影，可能会导致意外的结果。*
+
+
+
+
+
+### 1.3、列导入、Where条件筛选导入
+
+了解完查询导入后，我们来看看比较简单的两种导入方式。
+
+> 列导入
+
+将Table中指定列的数据全导入到HDFS中，使用`--columns`指定要导入数据的列。（必须使用`--table`指定数据表！！）
+
+```shell
+sqoop import \
+--connect jdbc:mysql://hadoop102:3306/company \
+--username root \
+--password 123456 \
+--table staff \
+--columns id,name \
+--target-dir /user/company \
+--delete-target-dir \
+--num-mappers 1 \
+--fields-terminated-by "\t"
+```
+
+简简单单，，，
+
+
+
+> Where条件筛选导入
+
+使用`--where`指定筛选条件，对表的数据进行简单筛选。
+
+```shell
+sqoop import \
+--connect jdbc:mysql://hadoop102:3306/company \
+--username root \
+--password 123456 \
+--table staff \
+--where "id<4 and id>2 and sex='Male'" \
+--target-dir /user/company \
+--delete-target-dir \
+--num-mappers 1 \
+--fields-terminated-by "\t"
+```
+
+条件表达式使用单引号`‘`包裹，当条件语句中出现了单引号的时候，使用双引号`“`包裹！
+
+**结合`--columus`和`--where`可以实现简单的查询导入，替代`--query`**
+
+
+
+**注意！**`--table`和`--query`是不能同时出现的！！那么也就注定了`--columus`和`--where`是不能出现在查询导入中的！！！
+
+
+
+
+
+## 案例二、导入数据到Hive
+
+回顾一下Hive，**Hive中的数据其最终都是存放在HDFS上的，元数据存放在MySQL中。所以将数据导入到Hive，只是多了从HDFS上将数据文件移动到对应的位置这一步！**话不多说，开始吧！
+
+
+
+首先参考官方用户指导手册，我们可以看到Hive导入相关的参数：
+
+![image-20201014210714123](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201014210714123.png)
+
+挨个看：
+
+- `--hive-home`：覆盖我们在配置文件中写好的`$HIVE_HOME`
+- `--hive-import`：导入数据到Hive的标志
+- `--hive-overwrite`：如果导入的Hive表中存在数据就覆盖重写数据
+- `--create-hive-table`：如果导入的Hive表已经存在了，则判定为导入失败
+- `--hive-table`：用于指定导入Hive表，可以带上数据库 `databaseName.tableName`(听说有些公司，你要是敢往default库里面添加数据，公司就直接给你飞了)
+
+其他的暂时没有使用，后续用到继续补充。。。
+
+
+
+**实操案例**：将MySQL中company库下的staff表导入到Hive的company库的staff表中。
+
+```shell
+sqoop import \
+--connect jdbc:mysql://hadoop102:3306/company \
+--username root \
+--password 123456 \
+--table staff \
+--num-mappers 1 \
+--fields-terminated-by "\t" \
+--hive-import \
+--create-hive-table \
+--hive-table company.staff
+```
+
+通过观察执行过程的日志输出时，就可以发现很明显的两个过程：
+
+1. 数据从MySQL导入到HDFS(具体路径是/user/$username/$databaseName/$tableName)
+2. hive使用load data将数据从HDFS移动到指定的位置下
+
+
+
+
+
+## 案例三、导入数据到HBase
+
+相比较于Hive,HBase的数据存储过程较为复杂，但是存储数据的方式却简单。数据最终都是写到HFile格式的文件中，并存放在HDFS上的，少了Hive中load data的过程。直接使用MR任务输出到对应的文件即可！！
+
+
+
+同样，我们先看官方文档中的参数手册：
+
+![image-20201014231152981](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201014231152981.png)
+
+- `--column-family`：这里表示导出数据的列属于哪个列族（列族忘记了建议复习一下HBase）,这就要求我们在导入数据的时候要使用`--columns`指定导出的数据列，或者默认就是全列属于这一个列族。
+- `--hbase-create-table`：当导入数据到HBase的表不存在时，自动创建HBase表。
+- `--hbase-row-key`：指定一个数据列，作为数据的row_key
+- `--hbase-table`：指定导入到的HBase表
+
+
+
+**案例实操**：将MySQL中company库下的staff表 导入到HBase中staff_hbase表的info列族下。
+
+```shell
+sqoop import \
+--connect jdbc:mysql://hadoop102:3306/company \
+--username root \
+--password 123456 \
+--table staff \
+--columns id,name,sex \
+--column-family info \
+--hbase-create-table \
+--hbase-row-key id \
+--hbase-table staff_hbase \
+--num-mappers 1
+```
+
+在尝试执行的时候，你可能会遇到这个错误：
+
+![image-20201014232939097](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201014232939097.png)
+
+根本原因还是版本兼容的问题，Sqoop在启动MR创建HBase表的时候，由于版本问题遇到了错误。。。目前最快的解决方式就是我们自己创建表，，，
+
+测试了一下，**自动创建列族是可以的**！！
+
+
+
+去看看执行的输出日志，会发现整个执行过程就是联合了zookeeper、Hbase、Hadoop三方，任务执行一气呵成。
+
+
+
+
+
+## 案例四、导出数据
+
+说完数据导入，导出数据必然也很重要。**但是前三个案例中，只有HDFS/Hive支持数据导出到MySQL，HBase不支持数据导出到MySQL..**
+
+数据导出要使用的命令是`sqoop export ...`
+
+其实从HDFS和从Hive导出数据都是一样的道理，都是解析一个普通的数据文件，然后将数据写入到MySQL。因为Hive中的数据就是以普通文件的形式放在HDFS上的。
+
+> 我们就尝试一下最基本的数据导出，就**从我们刚才导入到Hive的数据文件重新导出回到MySQL中**！！
+>
+> 注意：导出到MySQL时，若**表不存在是不会自动创建的**！
+
+```shell
+sqoop export \
+--connect jdbc:mysql://hadoop102:3306/company \
+--username root \
+--password 123456 \
+--table staff \
+--export-dir /user/hive/warehouse/company.db/staff \
+--input-fields-terminated-by "\t"
+```
+
+此案例中由于我们创建MySQL表的时候选择了ID自增，所以在导出数据之前，要将表truncate！！否则插入数据会报错！！
+
+我们重点看两个参数：
+
+`--export-dir`：指定导出数据的数据文件目录，是目录！不是某个文件！
+
+`--input-fields-terminated-by`：由于不同的数据文件中，可能出现字段的分隔符不同，所以要指定一下分隔符，以避免写入到MySQL的时候数据解析错误！！
+
+
+
+这还只是最简单最普通的数据导出，今后还会遇到更为复杂的，到时候同样也会用笔记记录下来的！！学会看懂官方的用户手册非常重要！！
