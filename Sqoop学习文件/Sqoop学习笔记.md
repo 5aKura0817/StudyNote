@@ -507,3 +507,41 @@ sqoop export \
 
 
 这还只是最简单最普通的数据导出，今后还会遇到更为复杂的，到时候同样也会用笔记记录下来的！！学会看懂官方的用户手册非常重要！！
+
+
+
+
+
+# 四、opt脚本文件
+
+与其他自动化任务一样，这种数据导入操作，一般都是在数据分析完成后，利用定时任务自动完成数据的导入和导出的吧。（总不可能你半夜三点，定个闹钟起来敲命令手动执行吧。。）
+
+Sqoop提供了一种方式：将命令选项写在一个**.opt文件**中，然后使用sqoop命令执行。有点类似Hive中的`hive -f xxx`
+
+1. 创建.opt文件
+
+2. 在opt文件中写上命令选项
+
+   ```shell
+   export
+   --connect
+   jdbc:mysql://hadoop102:3306/company
+   --username
+   root
+   --password
+   123456
+   --table
+   staff
+   --export-dir
+   /user/hive/warehouse/company.db/staff
+   --input-fields-terminated-by
+   "\t"
+   --num-mappers
+   1
+   ```
+
+3. 执行脚本
+
+   `sqoop --options-file xxx.opt`
+
+后续只需要将执行脚本文件这条命令加入定时任务就可以了！！

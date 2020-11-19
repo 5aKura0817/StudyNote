@@ -19,6 +19,9 @@ object TestVisibility {
     val s1:Student = new Student("Sakura","18130311")
 
     println(Student.count)
+
+    val person = new Person
+
   }
 
 }
@@ -46,7 +49,7 @@ object Student {
 }
 
 class Student(inName:String, inId:String) {
-  private[a] var name:String = inName
+  private var name:String = inName
   private var id:String = inId
 
   def introduce: Unit = {
@@ -58,6 +61,13 @@ class Student(inName:String, inId:String) {
 package a {
   object test {
     val s1 = new Student("sakura", "18130311")
-    s1.name
+
   }
+}
+
+
+class Person {
+  var name:String = "Sakura"
+  private var age:Int = 20
+  protected var sex:String = "Male"
 }

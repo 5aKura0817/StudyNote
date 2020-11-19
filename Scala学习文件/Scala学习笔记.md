@@ -1376,8 +1376,6 @@ public Person (String inName, int inAge) {
 
 
 
-
-
 我们再说回Scala，在Scala中是没有这种默认隐式调用父类构造的，只有主构造器才能和父类联系！所以所有的辅助构造器就需要最终调到主构造器，否则无法和父类建立联系。
 
 所以在Java中这种写法，在Scala中行不通=》
@@ -1541,7 +1539,7 @@ class Student (var inName:String,val inAge:Int) {
 
 
 
-## Chap07. Scala包
+## Chap07. Scala面向对象基础部分
 
 ### 7.1、Scala包基本介绍
 
@@ -2076,7 +2074,1865 @@ object TestImport {
 
 
 
+### 7.6、封装与继承
 
+与Java大部分相同，但是还是存在小部分差异的！例如：Scala中移除了public关键字就会对其在封装的概念上与Java产生很大的不同！！
+
+> 封装
+
+由于Scala中的控制权限修饰符只剩下：private、protected、不写默认三种，少了public。那么它又是如何做到和Java一样的权限控制的呢？（其实我们在7.4的访问权限中已经说过了！）
+
+**当你在写Scala类的属性时候，三种访问修饰符最终影响的是这个属性对应的两个方法的访问权限！**
+
+例如：
+
+```scala
+class Person {
+  var name:String = "Sakura"
+  private var age:Int = 20
+  protected var sex:String = "Male" 
+}
+```
+
+看似三个属性使用的是不同的访问修饰，但是编译后的Java代码呢？！
+
+```java
+public class Person {
+  // var name
+  private String name = "Sakura";
+  
+  public String name() {
+    return this.name;
+  }
+  
+  public void name_$eq(String x$1) {
+    this.name = x$1;
+  }
+  
+  // private var age
+  private int age = 20;
+  
+  private int age() {
+    return this.age;
+  }
+  
+  private void age_$eq(int x$1) {
+    this.age = x$1;
+  }
+  
+  // protected var sex
+  private String sex = "Male";
+  
+  public String sex() {
+    return this.sex;
+  }
+  
+  public void sex_$eq(String x$1) {
+    this.sex = x$1;
+  }
+}
+```
+
+1. 所有属性都是用`private`修饰！
+
+2. 既然都是private修饰，理论上外面都是访问不到的！但是实际上**无论是对属性修改还是取值，都是依托其自动生成的`xxx()`和`xxx_$eq()`两个方法。。**
+
+3. 所以这两个方法的访问权限才是属性的“真正的访问权限”
+
+   例如：你看name我们没写使用默认的访问权限：其对应的两个方法就是public!
+
+   ```java
+   // var name
+   private String name = "Sakura";
+   
+   public String name() {
+       return this.name;
+   }
+   
+   public void name_$eq(String x$1) {
+       this.name = x$1;
+   }
+   ```
+
+   而相反，使用private修饰的age，对应的两个方法就是private，外部是无法调用的，自然就实现了无法访问无法修改！
+
+   那protected和默认情况下是一样的，但是外部依然是无法使用的，只能在子类或者同类下调用。为什么是这样？作为小白的我目前也不清楚。。
+
+---
+
+综上，总结出一句简单的话：
+
+- Scala中所有对属性的访问，其实都是对方法的访问！
+
+
+
+> 继承
+
+这点和我们刚才讲的东西紧密相关！
+
+我们先来尝试一个例子：
+
+```scala
+class HbuePerson {
+  var name:String = _
+  private var age:Int = _
+  var sex:String = _
+
+  private def showInfo: Unit = {
+    println(s"My name is $name, $age years old, a $sex")
+  }
+
+  def sayHi: Unit = {
+    println(s"Hi, my name is $name")
+  }
+}
+
+class HbueStudent extends HbuePerson {
+  var id:String = _
+
+  def introduce: Unit = {
+    println(s"I am a student, my name is $name, my id is $id")
+  }
+}
+
+object TestExtends {
+  def main(args: Array[String]): Unit = {
+    val student = new HbueStudent
+    student.id = "18130311"
+    student.name = "sakura"
+    student.sex = "boy"
+    student.introduce
+    student.sayHi
+  }
+}
+```
+
+打断点debug一下：
+
+![image-20201020234220551](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201020234220551.png)
+
+到这里不禁深思，不是说父类的私有属性是子类继承不到的吗？！所以就有了这个问题：
+
+**子类到底从父类那里继承到了什么？！**
+
+==从语言的角度来讲：子类是不能使用父类中`private`属性，所以也就算不上对私有属性的继承。。==
+
+==但是从内存的角度来讲：子类继承父类时是将子类和父类合成一个新的类，（如图，子父类的属性都在同一个对象的堆内存中）即子类在内存中拥有父类所有的方法和属性，只是父类的私有部分子类无法访问罢了！！==
+
+
+
+再看看编译后的Java代码：
+
+==属性全部都是private修饰，那是不是原理上所有的属性子类都访问不到呢？！当然不是，因为子类访问父类的属性还要通过那俩方法！！==
+
+
+
+所以说来说去还是那句话：**在Scala中，访问对象的属性都要通过对应的方法完成！！**
+
+好好理解这句话，有助于我们后续学习属性覆盖重写。。
+
+
+
+### 7.7、方法重写
+
+使用到继承，那么就会涉及到对父类的方法进行重写这一重要步骤！总体上来说和Java中的方法重写区别不大，只需要注意两点：
+
+- 子类中重写的方法要使用`override`关键字修饰
+- 在子类中重写了父类的方法后，要调用父类的方法要使用`super.MethodName`方式调用。与子类中重写的方法加以区别！
+
+
+
+用一个例子来描述一下：
+
+```scala
+class Person {
+  def showInfo: Unit = {
+    println("I am a Person")
+  }
+}
+
+
+class Student extends Person {
+  
+  // 使用override修饰 表示对父类方法的重写
+  override def showInfo: Unit = {
+    // 使用super关键字调用父类的方法，以区别子类中重写的方法
+    super.showInfo
+    println("and I am a Student")
+  }
+
+}
+```
+
+
+
+### 7.8、类型检查与转换
+
+ 除了上面的方法重写的问题，再就是子类继承父类引出的多态的问题。
+
+**一个父类的引用是可以接受所有子类的引用的，而不同的子类内部结构不同，所以我们在使用的时候要做类型的检查和转换！！**
+
+> Tip: Scala中可以使用`xx.getClass.getName`获取对象的类型的全限定类名！
+
+类型检查：`isInstanceOf[]`
+
+类型转换：`asInstanceOf[]`
+
+两者都不会改变对象的类型，后者类型转化只是暂时将对象转为xx类型，但是并不会改变对象本身。
+
+```scala
+object TypeConvert {
+  def main(args: Array[String]): Unit = {
+    val p1:Person = new Student
+    val p2:Person = new Coder
+
+    // 此时p1、p2都是Person类型 无法调用到其引用类型的独有方法！
+    // 例如：p1.study   p2.coding 都是无法调用的
+    doSomething(p1)
+    doSomething(p2)
+  }
+
+  def doSomething (p:Person): Unit = {
+    if (p.isInstanceOf[Student]){ // 判断p是不是Student类型
+      p.asInstanceOf[Student].study
+    } else if (p.isInstanceOf[Coder]) { // 判断p是不是Coder类型
+      p.asInstanceOf[Coder].coding
+    } else {
+      println("类型转换失败...")
+    }
+  }
+}
+
+class Person {
+  def showInfo: Unit = {
+    println("I am a Person")
+  }
+}
+
+class Student extends Person {
+  override def showInfo: Unit = {
+    println("I am a Student")
+  }
+
+  def study: Unit = {
+    println("I am studying...")
+  }
+}
+
+class Coder extends Person {
+  override def showInfo: Unit = {
+    println("I am a Coder")
+  }
+
+  def coding: Unit = {
+    println("I am 996 working...")
+  }
+}
+
+```
+
+可以发现在没有使用类型转换之前，在出现多态的情况下时，只能使用父类的方法，子类特有的方法是无法调用的！！但是使用了类型转换后，子类的方法再次出现。。
+
+> 类型转换，不是你想转就能转！无法相互转化的类型，强制转换就会产生类型转换异常：
+>
+> `java.lang.ClassCastException`
+>
+> 所以在出现的多态的情况下：
+>
+> **一定要做类型检查，特别是做类型转化之前！！**
+
+
+
+
+
+### 7.9、继承中构造器调用
+
+在前面的继承学习中，我们都没有涉及到对父类构造器的调用，其实在Scala中对父类的构造器调用是一件较为复杂的事情。不像Java那样，可以直接使用`super(parameter..)`.
+
+而且在前面学习构造器的时候就说到过，在构造器方面Java和Scala是有很大不同的！
+
+先来看Java的示例代码：
+
+```java
+public class TestConstractor {
+    public static void main(String[] args) {
+        
+    }
+}
+
+class Person {
+    public String name;
+    public int age;
+    
+    public Person (String inName, int inAge){
+        name = inName;
+        age = inAge;
+    }
+    
+    public Person() {
+        name = "sakura";
+        age = 18;
+    }
+    
+}
+
+class Student extends Person {
+    public String id;
+    
+    public Student(String inName, int inAge, String inId) {
+        super(inName,inAge);
+        id = inId;
+    }
+    
+    public Student(String inId) {
+        super();
+        id = inId;
+    }
+}
+```
+
+Java中，子类可以使用`super(…)`任意调用父类的所有构造器。
+
+但是在Scala中，**辅助构造器必须间接/直接显式调用主构造器。**而在Java中就知道，子类的所有构造器调用都必须先调用父类的构造与父类进行联系。（不写默认调用父类的空参构造，即`super()`）。那么**对父类构造器的调用这件事情就只好交给主构造器来做，那么辅助构造器在间接/直接调用主构造器时就必定会调用到父类的构造器！**
+
+那么所有的辅助构造器就无法自主选择调用那个父类构造器了，全由主构造器来选择。（而Java中使用super()，想调哪个就用哪个。。）
+
+来猜猜看下面这段代码的输出：
+
+```scala
+object TestConstructor02 {
+  def main(args: Array[String]): Unit = {
+    val student = new Student()
+  }
+}
+
+class Person(inName:String, inAge:Int) {
+  var name:String = inName
+  var age:Int = inAge
+  println("Person(inName,inAge)")
+
+  def this(inName:String) {
+    this(inName,18);
+    println("Person this(inName)")
+  }
+
+  def this() {
+    this("sakura",18)
+    println("Person this()")
+  }
+
+}
+
+class Student(stuName:String, stuAge:Int, stuId:String) extends Person(stuName,stuAge) {
+  var id:String = stuId
+  println("Student(stuName, stuAge, stuId)")
+
+  def this (stuName:String, stuAge:Int) {
+    this(stuName,stuAge,"181303xx")
+    println("Student this(stuName, stuAge)")
+  }
+
+  def this() {
+    this("sakura",18,"18130311")
+    println("Student this()")
+  }
+}
+```
+
+这是构造器的调用结构：
+
+![image-20201023113631576](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201023113631576.png)
+
+所以程序的调用顺序应该是：
+
+1. `Person(inName,inAge)`
+2. `Student(stuName,stuAge,stuId)`
+3. `Student this()`
+
+向上溯源到顶层父类然后向下依次执行。。
+
+不管子类Student继承父类Person时使用的是那个父类的构造器，最终也还是会调用到父类的主构造器。（即那个<font style="color: green;font-weight: bold">绿色</font>的线不管指向父类的哪个构造器，最终溯源都会到父类的主构造器上。）
+
+> 总结一下就是：
+>
+> 子类调用父类的构造器只有一个“入口”，即子类的主构造器。子类的辅助构造器不能直接调用父类的构造器！
+
+
+
+
+
+### 7.10、Java字段隐藏与动态绑定
+
+在Java的学习过程中我们之了解过方法的覆写，并没有听说过字段的覆写。其实Java中存在一个**字段隐藏**的机制！
+
+> 什么是字段隐藏呢？
+
+我们先用个例子来试试:
+
+```java
+public class FieldOverrideTest {
+    public static void main(String[] args) {
+        Super obj1 = new Super();
+        Super obj2 = new Sub();
+        Sub obj3 = new Sub();
+
+        System.out.println(obj1.str); // 父类的str
+        System.out.println(obj2.str); // 父类的str
+        System.out.println(obj3.str); // 子类的str
+    }
+}
+
+class Super {
+    public String str = "父类的str";
+}
+
+class Sub extends Super {
+    public String str = "子类的str";
+}
+```
+
+是不是感觉有点匪夷所思？obj2明明创建的是一个Sub对象，但是输出的内容为什么是Super类中的内容呢？其实这就是字段隐藏。
+
+==当父类和子类拥有同名的public属性（字段）的时候，对字段取值的结果取决于你用什么引用去取。==
+
+如上这个例子：虽然obj2是一个Sub对象，但是它被交给了一个父类引用。所以取值就是取父类中的字段值。而子类中的同名字段就被“隐藏”。
+
+那猜猜：
+
+```java
+((Super)obj3).str = ?
+((Sub)obj2).str = ?
+```
+
+答案是：
+
+```java
+((Super)obj3).str = "父类的str"
+((Sub)obj2).str = "子类的str"
+```
+
+说简单一些，即使子类和父类中存在了重名的字段。相互不会影响，取值方式不同取到的值也不同！！**所以建议大家不要这样做，会提高代码的阅读难度！！**
+
+
+
+说到这里，那么就不得不谈Java的另一个重要机制了：**动态绑定机制**
+
+> 动态绑定（auto binding）：也叫后期绑定，在运行时，虚拟机根据具体对象的类型进行绑定，或者说是只有对象在虚拟机中创建了之后，才能确定方法属于哪一个对象。
+>
+> 与之对应的是
+>
+> 静态绑定（static binding）：也叫前期绑定，在程序执行前，该方法就能够确定所在的类。
+
+我们先给出两个类：
+
+```java
+class A {
+    public int i = 10;
+
+    public int sum() {
+        return getI() + 10;
+    }
+
+    public int sum1() {
+        return i + 10;
+    }
+
+    public int getI() {
+        return i;
+    }
+}
+
+class B extends A {
+    public int i = 20;
+
+    @Override
+    public int sum() {
+        return getI() + 20;
+    }
+
+    @Override
+    public int sum1() {
+        return i + 10;
+    }
+
+    @Override
+    public int getI() {
+        return i;
+    }
+}
+```
+
+来猜猜下面这段代码的结果：
+
+```java
+public class AutoBindingTest {
+    public static void main(String[] args) {
+        A obj = new B();
+        System.out.println(obj.sum());
+        System.out.println(obj.sum1());
+    }
+}
+```
+
+不要受刚才的字段隐藏的影响，虽然是一个B对象交给了A的引用，但是在对象装入JVM虚拟机的时候，由于B是继承于A的，所以他会拥有一个方法表，其中包含了所有他可以调用的方法（包括父类的！）
+
+程序运行时，**会先查方法表，若本类中有就直接调用，否则调用父类的。**
+
+所以结果显而易见：
+
+```
+40 // 20(B.getI) + 20
+30 // 20(B.i) + 10
+```
+
+可是当我将**B类中的sum()方法注释掉**以后，结果奇迹般变成了
+
+```
+30 // 20(B.getI) + 10  (A.sum)
+30
+```
+
+这不河里啊！！就算是调用父类的sum()那也应该是10+10=20啊！
+难不成调用父类(A)的sum()的时候，getI取的是B中的i ??!
+
+诶，你猜对了！！不妨对代码Debug一下吧！在执行`obj.sum()`的时候准确认无误跳转到了A的sum()这里，可以在执行其中的`getI()`的时候，鬼使神差去调用了B的！这是为什么？我们等下再说。。。
+
+
+
+
+
+现在我们将**B中的sum1()注释**，将sum()还原：结果是
+
+```
+40
+20
+```
+
+这个是我们能够预料到的，分别对应B.sum()和A.sum1()，getI和i都是使用的各自的。
+
+
+
+
+
+现在我们将**B中的sum()和sum1()都注释掉**：结果是
+
+```
+30 // B.getI + 10  (A.sum)
+20 // A.i + 10  (A.sum1)
+```
+
+总结前面两次的结果，这个应该也是在意料之中。说明在调用getI的时候，还是使用的B的getI()。
+
+----
+
+下面来对动态绑定机制做一个简单解释和小结：
+
+- 当你在调用方法的时候，JVM会先去查找对象的方法列表，执行对应的方法（本类没有的 调父类的！）
+- 但是当你直接调用属性的时候，（例如上面`sum1()`直接使用`i`这个成员属性）没有动态绑定机制，在哪里调用就用哪个的。（比如你调用A的sum1()，要用到i这个属性，那就直接用A的。）
+
+当然这只是一种便于理解的解释方式，更加严谨的解释可以查阅相关博客！！
+
+
+
+### 7.11、Scala字段覆写
+
+对比Java来说，Scala的字段覆写是一个全新的东西！
+
+之前我们使用Java编写代码的时候，子类和父类下是允许有同名的字段的！！只不过使用了隐藏字段的方式解决了调用时可能出现的问题。
+
+但是在Scala中，是不能子类和父类存在同名字段的，只能是子类**覆写**父类的字段！
+
+代码：
+
+```scala
+object ScalaFieldOverride {
+  def main(args: Array[String]): Unit = {
+    val a = new A
+    val b = new B
+    println(a.str) // 我是A类
+    println(b.str) // 我是B类
+  }
+}
+
+class A {
+  val str:String = "我是A类"
+}
+
+class B extends A {
+  override val str:String = "我是B类"
+}
+```
+
+==注意：var类型的字段是不能被覆写的！（mutable variable cannot be overridden）==其他的注意事项我们稍后再说。
+
+前面讲Scala的字段调用的时候，我们就说过，对于属性的调用其实都是调用相关的方法即`xx()`。那么这里的字段覆写，我们可以猜到，那么也肯定生成了相应的取值方法，也就保证了调用的时候能够正确调到！
+
+
+
+> 注意事项一：
+>
+> val类型的字段必须使用val覆写。（若是使用var，都会改变字段的可操作范围！！[只读变为了可读可写]）
+>
+> 注意事项二：
+>
+> 每个def只能覆写另一个def!(即方法只能覆写另一个方法！)
+>
+> 注意事项三：
+>
+> **无参的方法可以使用val属性覆写！（方法的返回值类型 与 覆写字段的类型相同）**
+
+
+
+针对注意事项三，这里有个案例：
+
+```scala
+object ScalaFieldOverride {
+  def main(args: Array[String]): Unit = {
+    val a = new A
+    val b = new B
+      
+    println(a.testA()) // 我是A类
+    println(b.testA)  // Hello
+  }
+}
+
+class A {
+  val str:String = "我是A类"
+
+  def testA(): String = {
+    return str;
+  }
+}
+
+class B extends A {
+  override val str:String = "我是B类"
+
+  override val testA:String = "Hello";
+
+}
+```
+
+**为什么偏偏是无参的方法可以使用val属性的字段覆写呢？**
+
+想想看我们使用val进行字段覆写的时候，就自动生成了**一个无参的、与字段同名、返回值类型与字段相同的方法**！那这里也是同样的道理，所以你完全可以把那个无参的方法看作一个val类型的字段！
+
+来看看反编译后的Java代码：
+
+```java
+public class A {
+  private final String str = ";
+  
+  public String str() {
+    return this.str;
+  }
+  
+  public String testA() {
+    return str();
+  }
+}
+
+public class B extends A {
+  private final String str = ";
+  
+  public String str() {
+    return this.str;
+  }
+  
+  private final String testA = "Hello";
+  
+  public String testA() {
+    return this.testA;
+  }
+}
+```
+
+
+
+> 抽象类初见面
+
+Scala中也是有抽象类的！不过现在我们要了解的东西叫做**抽象属性**！
+
+在Scala中，之前我们说过**变量声明的时候就需要赋一个初始化值。但是抽象属性就不需要！但是抽象属性只能存在于抽象类中！！抽象类需要使用`abstract`关键字修饰！**抽先类中也可以存在普通字段。
+
+```scala
+abstract class MyAbstractClass {
+  // 这是一个抽象属性，没有初始值！
+  var str:String
+  // 这是一个普通属性
+  var num:Int = 10;
+}
+```
+
+**抽象属性在编译后也会生成那两个方法，但是都是抽象的方法，也就意味着我们必须实现那俩方法才能使用这个属性！！**来看看反编译得到的Java代码：
+
+```java
+public abstract class MyAbstractClass {
+  private int num = 10;
+  
+  public abstract String str();
+  
+  public abstract void str_$eq(String paramString);
+  
+  public int num() {
+    return this.num;
+  }
+  
+  public void num_$eq(int x$1) {
+    this.num = x$1;
+  }
+}
+```
+
+Scala代码中我们貌似是声明了一个属性，实则是声明了两个抽象方法，**当子类继承抽象类的时候，必须实现这俩抽象方法！**我们现在用一个子类来实现一下：
+
+```scala
+class MySimpleClass extends MyAbstractClass {
+  override var str: String = "Hello World"
+}
+```
+
+其实这算不上是方法覆写，应该只是对抽象的实现，所以**override关键字是可以省略掉的！**
+
+查看反编译后的代码：
+
+```java
+public class MySimpleClass extends MyAbstractClass {
+  private String str = "Hello World";
+  
+  public String str() {
+    return this.str;
+  }
+  
+  public void str_$eq(String x$1) {
+    this.str = x$1;
+  }
+}
+```
+
+
+
+### 7.12、抽象类
+
+抽象类是什么，什么作用 这些不用多说，Java中都多少有了解。在Scala中，抽象类可以包含抽象字段（属性），抽象方法，以及普通字段和方法。
+
+由于Scala中`abstract`关键字只能用于修饰Class，所以**抽象方法不需要使用`abstract`关键字！只需要按照普通方法一样声明，省去方法体即可！**抽象字段不需要初始值！
+
+
+
+```scala
+abstract class MyAbstractClass {
+  // 这是一个抽象属性，没有初始值！
+  var str:String
+  // 这是一个普通属性
+  var num:Int = 10;
+  // 这是一个抽象方法
+  def abstractMethod(param:String)
+}
+```
+
+> 注意点：
+>
+> - 抽象类不一定有抽象方法，抽象属性
+> - 抽象类无法实例化
+> - 抽象属性和抽象方法不能使用`private`、`final`关键字修饰，与继承实现违背！
+> - 子类继承抽象类，必须实现抽象内容（抽象方法、抽象字段）
+> - 对抽象方法、抽象字段的实现可以省略`override`
+
+
+
+上面说抽象类不可以实现，确实如此，但是我们可以使用**匿名子类**来模拟一下抽象类的“实现”
+
+```scala
+object AbstractClassTest {
+  def main(args: Array[String]): Unit = {
+    val anonymousObj = new MyAbstractClass {
+      override var str: String = "Hello World"
+
+      override def abstractMethod(param: String): Unit = {
+        println(param + ", i am not a abstract method")
+      }
+    }
+  }
+}
+```
+
+在**创建对象的时候，同时完成对抽象部分的实现。这就是匿名子类，一次性使用。**
+
+
+
+
+
+
+
+## Chap08.Scala面向对象高级特性
+
+
+
+### 8.1、细说伴生类和伴生对象
+
+在7.4节，我们简单接触了伴生类和伴生对象。现在我们来细节了解一些伴生类和伴生对象！
+
+为什么出现这俩东西？！Scala的设计者不满意Java中将静态的内容写在类中，认为其破坏了面向对象的设计概念，于是在Scala中直接舍弃了`static`这个关键字！但是静态的内容，还是得用啊，又不能写在class里面，那咋办呢？于是伴生对象就出现了并担此重任！我们将以前所有写在类中的静态内容（静态成员、静态方法），现在全部写在伴生对象中！
+
+
+
+伴生对象和伴生类基础模板：
+
+```scala
+// Student的伴生类
+class Student {
+    // ...
+}
+
+// Student的伴生对象
+object Student {
+    // ...
+}
+```
+
+
+
+我们按照既定的规则，来写一个，看看反编译后的Java代码究竟长什么样！
+
+```scala
+object TestCompanion {
+  def main(args: Array[String]): Unit = {
+    val zs = new Student("张三", 18)
+    val ls = new Student("李四", 20)
+
+    zs.introduce()
+    Student.countStu()
+  }
+}
+
+class Student(inName:String, inAge:Int) {
+  var naem:String = inName
+  var age:Int = inAge
+  cnt = cnt + 1
+  def introduce(): Unit = {
+    println(s"My name is $naem, I am $age years old.")
+  }
+}
+
+object Student {
+  var cnt:Int = 0;
+
+  def countStu(): Unit = {
+    println(s"现在共有${cnt}个学生!")
+  }
+}
+
+```
+
+这段代码中我们将实例成员都放在了class中，静态成员都放在object中。并对静态成员进行了调用，我们来看看反编译的Java代码吧！
+
+`Student`
+
+```java
+public class Student {
+  private String naem;
+  
+  private int age;
+  
+  public static void countStu() {
+    Student$.MODULE$.countStu();
+  }
+  
+  public static void cnt_$eq(int paramInt) {
+    Student$.MODULE$.cnt_$eq(paramInt);
+  }
+  
+  public static int cnt() {
+    return Student$.MODULE$.cnt();
+  }
+  
+  public String naem() {
+    return this.naem;
+  }
+  
+  public void naem_$eq(String x$1) {
+    this.naem = x$1;
+  }
+  
+  public int age() {
+    return this.age;
+  }
+  
+  public void age_$eq(int x$1) {
+    this.age = x$1;
+  }
+  
+  public void introduce() {
+    Predef$.MODULE$.println((new StringBuilder(29)).append("My name is ").append(naem()).append(", I am ").append(age()).append(" years old.").toString());
+  }
+  
+  public Student(String inName, int inAge) {
+    this.naem = inName;
+    this.age = inAge;
+    Student$.MODULE$.cnt_$eq(Student$.MODULE$.cnt() + 1);
+  }
+}
+```
+
+`Student$`
+
+```java
+public final class Student$ {
+  public static final Student$ MODULE$ = new Student$();
+  
+  private static int cnt = 0;
+  
+  public int cnt() {
+    return cnt;
+  }
+  
+  public void cnt_$eq(int x$1) {
+    cnt = x$1;
+  }
+  
+  public void countStu() {
+    scala.Predef$.MODULE$.println((new StringBuilder(8)).append(").append(cnt()).append(").toString());
+  }
+}
+```
+
+请先好好看看这两个反编译出来的Java类。
+
+你会发现`Student`类是完全符合我们Java写法的（除了静态变量没有体现），静态方法也有，这个类就是伴生类的反编译代码！
+
+（可能你会疑问，不是说了静态内容写在伴生对象中的吗？！为什么这里面出现了static方法？！）
+
+那你仔细看看会发现，这些个静态方法中，实际都用到了这样一个东西`Student$.MODULE$.xxx`，而这个本身没有其他实质性的内容，这下就引出了伴生对象！
+
+`Student$`这个类就是伴生对象反编译出来的！而这个`MODULE$`则是这个类的一个`static final`实例（仅有一个，并且直接使用！）
+你看这个类中，虽然方法都不是静态的，但是在`Student`的静态方法底层都是通过`MODULE$`这个唯一实例来调用的，所以对外部来说，感觉这些就是静态的！
+
+**所以Scala中都是依赖`MODULE$`来实现静态特性的！**
+
+
+
+看完上面的代码，注意几个点：
+
+- **伴生对象中的内容，可以像Java中使用静态内容一样使用！用类名访问/调用**
+- **伴生对象和伴生类的声明必须写在同一个源码文件中！！**
+
+
+
+
+
+### 8.2、伴生对象的Apply方法
+
+当定义了伴生类和伴生对象的时候，可以在伴生对象中定义`apply`方法，可以**直接使用类名加参数创建对象**，不必使用new关键字！
+
+示例：
+
+```scala
+object TestApply {
+  def main(args: Array[String]): Unit = {
+    // 传统创建对象的方法
+    val cat1 = new Cat("来宝")
+    
+    // 使用apply触发伴生类创建对象
+    val cat2 = Cat("书宝")
+    val cat3 = Cat()
+
+    println("cat1: " + cat1.name) // 来宝
+    println("cat2: " + cat2.name) // 书宝
+    println("cat3: " + cat3.name) // 无名猫
+  }
+}
+
+class Cat(inName:String) {
+  var name:String = inName
+}
+
+object Cat {
+  def apply(inName: String): Cat = new Cat(inName)
+
+  def apply(): Cat = new Cat("无名猫")
+}
+```
+
+这种做法，便于我们将类的构造器设置为私有的！
+
+
+
+### 8.3、Scala的“接口”—trait(特征、特质)
+
+在Scala中，没有`interface`关键字，那么接口这么重要的东西就直接被移除了吗？！当然不行！全靠抽象类是解决不了问题的，在Scala中类还是只能单继承。所以必须要有一个东西来代替Java中的interface! 于是`trait`闪亮登场！
+
+`trait`翻译意思为：特征、特质。很形象，就是将类的基本特征提取出来，然后用于给其他类继承实现！
+
+> trait的基本使用
+
+1. 使用`trait`关键词声明创建一个特质
+
+2. 其他类使用`extends`关键词继承/实现此特质
+
+   ==注意：当类需要继承父类并同时实现多个特质的时候，使用`with`关键词连接，继承的父类写在前面！==
+
+   例如：
+
+   ```scala
+   class Son extends Father with Trait01 with Trait02 with ... 
+   ```
+
+下面来一个最简单的示例：
+
+```scala
+object TraitDemo01 {
+  def main(args: Array[String]): Unit = {
+    val pig = new Pig
+    pig.snore()
+    pig.sleepTalk()
+  }
+}
+
+class Pig extends Sleep {
+  override def snore(): Unit = {
+    println("呼～～～～")
+  }
+
+  override def sleepTalk(): Unit = {
+    println("我要吃螃蟹～～吃披萨～～")
+  }
+}
+
+// 这是一个trait
+trait Sleep {
+  // 下面是待实现的抽象方法
+  def snore()
+  def sleepTalk()
+}
+```
+
+上面的代码反编译为Java代码后的样子：
+
+trait:
+
+![image-20201104231005442](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201104231005442.png)
+
+实现类：
+
+![image-20201104231025208](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201104231025208.png)
+
+是不是一下就有内味了！
+
+
+
+我们知道在Java中接口里面声明的变量都是常量（final修饰的）！！
+
+而且之前在Java的接口中是不能写已经实现的方法的，后来出现了`default`关键字，用这个关键词在接口中声明方法可以有方法体，其他类实现接口的时候不要求重写实现，但是可以进行覆写！
+
+*trait中既有实现方法又有抽象方法的又成为 “富接口 ”*
+
+那么在trait中又是个什么情况呢？！来试试看吧：
+
+> 首先来看trait中声明属性（var类型）
+
+```scala
+trait Sleep {
+  var name:String = "噜噜"
+}
+```
+
+你会发现这个属性在其实现类中仍然可以修改值，这也在情理之中，毕竟Scala中属性的修改和调用都是通过方法来实现的。直接来看反编译的Java代码吧！！
+
+```java
+public interface Sleep {
+  String name();
+  
+  void name_$eq(String paramString);
+  
+  static void $init$(Sleep $this) {
+    $this.name_$eq("噜噜");
+  }
+}
+
+public class Pig implements Sleep {
+  private String name;
+  
+  public String name() {
+    return this.name;
+  }
+  
+  public void name_$eq(String x$1) {
+    this.name = x$1;
+  }
+  
+  public Pig() {
+    Sleep.$init$(this);
+  }
+}
+```
+
+与7.11和7.12中我们讲的抽象类一样，看似是声明了一个属性，其实是声明了两个抽象方法留给实现类来实现！
+
+仔细看看还有初始化的操作，实现类的构造器中调用接口中的静态方法`$init$`，静态方法直接使用`xxx_$eq()`的默认实现为属性赋值！**与Java不同：这个属性不属于接口（Trait），而是属于每个实现此Trait的类！**
+
+
+
+> 下面是在Trait中写已实现的方法
+
+```scala
+class Dog extends Eat {
+//  override def findFood: Unit = {
+//    println("发现骨头！！汪汪汪～～")
+//  }
+}
+
+trait Eat {
+  def findFood: Unit = {
+    println("发现食物！！")
+  }
+}
+```
+
+同样，不强制要求实现！但是也可以选择覆写。即使不覆写也能使用默认的方法体！
+
+先来看看不覆写的时候的调用过程：反编译的代码：
+
+trait：
+
+![image-20201105001242119](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201105001242119.png)
+
+平平无奇，果真就是`default`关键字！
+
+实现类：
+
+![image-20201105001320463](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201105001320463.png)
+
+直接使用接口中的default方法！！外界调用的时候相当于直接使用默认的实现（即接口中已实现的）
+
+
+
+下面我们在实现类中，将方法覆写看看：
+
+```scala
+class Dog extends Eat {
+  override def findFood: Unit = {
+    println("发现骨头！！汪汪汪～～")
+  }
+}
+```
+
+反编译后，可以看出只是将实现类中原来的调用接口默认实现换成了覆写的内容：
+
+![image-20201105001804917](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201105001804917.png)
+
+综上来看：Scala中Trait完成了Java中interface的几乎全部的功能！完全可以按照interface的使用方式来使用trait!!
+
+
+
+
+
+### 8.4、动态混入
+
+初次看到这个词可能会感到新鲜，“动态混入”的出现是为了优化Java中的接口实现，做到真正意义上的松散组合降低耦合！
+
+回想一下Java中的接口实现，类实现接口后，是会永久性影响到类本身的内容的！但是利用动态混入后，**可以在不改变类的声明的定义的情况，按需对类进行扩展！**（是不是听起来就感觉很炫酷！）
+
+
+
+初次尝试：
+
+```scala
+object DynamicMixinDemo01 {
+  def main(args: Array[String]): Unit = {
+    val animal_A = new Animal
+    animal_A.sayHi() // 普通对象，未进行扩展
+
+    // 动态混入 Hunt
+    val animal_B = new Animal with Hunt
+    animal_B.catchMice
+    
+    // 动态混入 MakeNoise
+    val animal_C = new Animal with MakeNoise
+    animal_C.shout
+
+    // ...
+    val animal_D = new Animal with Hunt with MakeNoise
+    animal_D.catchMice
+    animal_D.shout
+    // 以上是使用动态混入 进行了扩展了对象
+
+  }
+}
+
+class Animal {
+  def sayHi(): Unit = {
+    println("我是一个动物！")
+  }
+}
+
+trait Hunt {
+  def catchMice: Unit = {
+    println("抓到一只耗子")
+  }
+}
+
+trait MakeNoise {
+  def shout: Unit = {
+    println("miao~~miao~~~")
+  }
+}
+```
+
+
+
+你会发现，上面案例中我们动态混入的Trait(特制)都是只有实现方法的，其实一般情况下特制中都是抽象方法，那么在动态混入的时候，就要求对抽象方法进行实现！如下：
+
+```scala
+val animal_D = new Animal with Hunt with MakeNoise {
+    override def shout: Unit = {
+        println("......")
+    }
+    // ...其他抽象方法的实现
+}
+```
+
+很容易看出来，我们在使用动态混入后，并没有修改主类（Animal类）中的任何内容，并没有涉及到对其的修改！单单使用`with`关键字在创建对象的时候对类进行扩展！！**降低了trait和class之间的耦合！**
+
+
+
+### 8.5、动态混入的叠加机制
+
+上面我们简单学习了动态混入，并且见识到了它所带来的便捷！但是在使用动态混入的时候我们还需要注意一些细节！
+
+> 动态混入的混入顺序：
+>
+> **从左往右！**
+>
+> > 什么是混入顺序呢？有什么影响呢？
+>
+> *当我们同时混入多个特质，总该是有个混入的顺序吧！（Trait中的“静态代码”在混入的时候就会执行，所以混入的顺序会影响他们的执行顺序…）*
+
+示例：
+
+```scala
+object DynamicMixinDemo02 {
+  def main(args: Array[String]): Unit = {
+    val obj = new SimpleClass with MyTraitD with MyTraitC
+  }
+}
+
+class SimpleClass {
+
+}
+
+trait MyTraitA {
+  println("Mixin MyTraitA~")
+
+  def showInfo(): Unit = {
+    println("I mixed MyTraitA")
+  }
+}
+
+trait MyTraitB extends MyTraitA {
+  println("Mixin MyTraitB~")
+
+  override def showInfo(): Unit = {
+    super.showInfo()
+    println("I mixed MyTraitB")
+  }
+}
+
+trait MyTraitC extends MyTraitB {
+  println("Mixin MyTraitC~")
+
+  override def showInfo(): Unit ={
+    super.showInfo()
+    println("I mixed MyTraitC")
+  }
+}
+
+trait MyTraitD extends MyTraitB {
+  println("Mixin MyTraitD~")
+
+  override def showInfo(): Unit = {
+    super.showInfo()
+    println("I mixed MyTraitD")
+  }
+}
+```
+
+代码案例中一共有有四个Trait：`MyTraitA`、`MyTraitB`、`MyTraitC`、`MyTraitD`,他们的关系如图：
+
+![image-20201113221553233](https://picbed-sakura.oss-cn-shanghai.aliyuncs.com/notePic/image-20201113221553233.png)
+
+我们创建对象时候，同时混入了MyTraitC和MyTraitD：
+
+```scala
+val obj = new SimpleClass with MyTraitD with MyTraitC
+```
+
+但是程序运行的输出结果是：
+
+> Mixin MyTraitA~
+> Mixin MyTraitB~
+> Mixin MyTraitD~
+> Mixin MyTraitC~
+
+解释这个输出就要用到动态混入的*叠加机制*，前面我们说了混入顺序是**从左往右**，所以代码的执行过程就是：
+
+- 混入MyTraitD过程：
+  1. 开始混入MyTraitD，发现其有父类，为MyTraitB
+  2. 开始混入MyTraitB，同样发现父类MyTraitA
+  3. 开始混入MyTraitA，执行静态代码块
+  4. 执行MyTraitB的静态代码，执行MyTrait的静态代码…
+- 混入MyTraitC过程：
+  1. 开始混入MyTraitC，发现有父类MyTraitB
+  2. 发现前面已经完成了MyTraitB、MyTraitA的混入，根据叠加机制，不必重复混入
+  3. 执行MyTraitC的静态代码…
+
+
+
+> 动态混入的Trait之间的“父子”关系
+>
+> **方法执行顺序从右往左（不完全正确！和混入顺序有关！）**
+>
+> > 为什么混入的顺序的不同，会影响Trait的父子关系？！
+>
+> *在使用动态混入的时候，父子关系取决于混入的顺序！*
+
+案例：还是上面的代码，现在我们执行
+
+```scala
+val obj = new SimpleClass with MyTraitD with MyTraitC
+obj.showInfo();
+```
+
+按照上面的提示，方法执行是从右往左，那么就应该是执行MyTraitC中的showInfo()，若没有就执行MyTraitD中的，若还是没有再执行MyTraitB中的，然后逐级向上。。
+
+输出结果是这样的：
+
+> I mixed MyTraitA
+> I mixed MyTraitB
+> I mixed MyTraitD
+> I mixed MyTraitC
+
+！！可以看出在执行MyTraitC中showInfo()的时候，调用的`super.showInfo()`的时候是调到了MyTraitD的！可是MyTraitC声明的时候父类是MyTraitB啊！！
+*这就是刚才所说的使用动态混入，增加、改变了父子关系！*
+
+
+
+结合上面两个案例，可以看出使用动态混入时候，**一定要注意混入的顺序！！**否则直接影响到代码的运行结果，混入顺序决定了代码的执行顺序，并且可能增加/改变无关Trait之间的父子关系！
+
+> **&&:**由于混入的顺序是严格按照父子继承顺序来的！所以是不会改变原有的父子关系的！*但是会增加无关类之间的父子关系！！！*
+>
+> 比如这个：
+>
+> ```scala
+> val obj2 = new SimpleClass with MyTraitB with MyTraitA
+> obj2.showInfo()
+> ```
+>
+> 你觉得是先执行MyTraitA中的showInfo()吗？那么你猜的结果就是
+>
+> > I mixed MyTraitB
+> > I mixed MyTraitA
+>
+> 那你就错了！实际输出是：
+>
+> > I mixed MyTraitA
+> > I mixed MyTraitB
+>
+> 你推导推导混入的顺序。。
+> 是不是MyTraitA -> MyTraitB。所以即使使用了动态混入，也不会改变MyTraitA是MyTraitB父类这个既定事实！！
+>
+> 所以上面说的*方法执行顺序从右到左* 指的是混入顺序的从右到左！
+
+-----
+
+> <span style="color:red;font-size:30px;font-weight:1000;">总结一下！！！！</span>
+>
+> 在动态混入**没有继承关系**的Trait的时候，会为他们**附上父子关系**！**混入顺序将决定谁是子谁是父！！**
+
+
+
+### 8.6、动态混入时抽象方法部分实现
+
+之前的案例二中，我们说过特质方法中的使用的`super`不一定就是调用声明时的父类方法！！而是参照混入的顺序来决定！实在混入顺序中没有了，才去真正的父类中去找！
+
+**在特质方法实现的时候有个问题：如果在实现方法中调用super, 会如何？**Scala的神奇操作会让你大吃一惊！！
+
+例如这样：
+
+```scala
+trait MyTrait1 {
+  def func()
+}
+
+trait MyTrait2 extends MyTrait1 {
+  override def func(): Unit = {
+    println("MyTrait2 func()")
+    super.func()
+  }
+}
+```
+
+神奇的是，这样写没有语法报错！但是编译运行出错了！:(
+
+<span style="color:red;">method func in trait MyTrait1 is accessed from super. It may not be abstract unless it is overridden by a member declared `abstract` and `override`</span>
+
+它给出的解决方案就是，**重写方法使用`abstract override`修饰！**
+当你给MyTrait2的func加上abstract之后，居然没有运行报错了！神了！
+
+```scala
+trait MyTrait1 {
+  def func()
+}
+
+trait MyTrait2 extends MyTrait1 {
+  abstract override def func(): Unit = {
+    println("MyTrait2 func()")
+    super.func()
+  }
+}
+```
+
+以上这种做法，我们暂且称其为**抽象方法的部分实现**！因为它确实实现了部分，但是还是一个抽象方法，需要其他类来完全实现！而这里的`super`在碰上动态混入的时候就会变得很有灵性！（反正肯定不会指向MyTrait1!!）
+
+
+
+当你创建一个类只混入MyTrait1的时候，会要求你实现func()!
+当你创建一个类只混入MyTrait2的时候，会告诉你这个func()已经在MyTrait2中部分实现了（使用`abstract override`声明了），但是在使用了动态混入后的类中，找不到这个方法的完整实现！！
+
+*这两个错误都是一个原因！因为你使用了动态混入，那个时候是在创建一个对象！对象里面肯定是不能存在抽象方法的！！你要不给我实现，要不就不要混入进来！！*
+
+那么第二个错误，要如何解决呢？！
+
+- 简单粗暴！去掉`abstract override`告诉他：爷就是一个抽象方法的完整实现！并且去掉`super`或者去掉extends MyTrait1
+
+- 再用若干个特质来完整实现这个func()！！
+
+  ```scala
+  object DynamicaMixinDemo03 {
+    def main(args: Array[String]): Unit = {
+      val obj = new SimpleClass with MyTrait3 with MyTrait2
+      obj.func()
+    }
+  }
+  
+  trait MyTrait1 {
+    def func()
+  }
+  
+  trait MyTrait2 extends MyTrait1 {
+    abstract override def func(): Unit = {
+      println("MyTrait2 func()")
+      super.func()
+    }
+  }
+  
+  trait MyTrait3 extends MyTrait1 {
+    override def func(): Unit = {
+      println("MyTrait3 func()")
+      // super.func() 这行不能写！！为什么？！
+    }
+  }
+  ```
+
+> 以上的代码有几个注意点！！！
+>
+> 1. *为什么MyTrait3是extends MyTrait1而不是MyTrait2?!*
+>
+>    > 想想看，如果extends MyTrait2，那么混入的顺序按照父子关系是不是就是MyTrait1->MyTrait2->MyTrait3 ,那么MyTrait2中的func那行`super.func()`还是调到了MyTrait1的脸上！！当然会报错～～
+>    >
+>    > 可是如果extend MyTrait2，那么按照混入顺序(MyTrait1->MyTrait3->MyTrait2)原本毫无关系的MyTrait2和MyTrait3就带上了父子关系，那么MyTrait2中的super就指向了MyTrait3～～再一看MyTrait3中的func是一个已经实现的方法！！（可是如果MyTrait3这个杀千刀的没有实现func，或者只是部分实现，那就又会报错了！）
+>
+> 2. *为什么这个混入顺序下，MyTrait3中func中最后一行super.func()不能写？！*
+>
+>    > 和混入的顺序无关！因为从语法层面上你MyTrait3的父类还是MyTrait1，那么你就不能使用`super.func()`!因为编译的时候，不能确保你的混入顺序。那么暂时就把MyTrait1当作super，当然就无法通过。
+>
+> 3. *混入顺序能不能先MyTrait2再MyTrait3*
+>
+>    > 在不修改特质的代码的情况下，是不行的！因为按照修改后这个混入顺序，MyTrait2中func的super.func()会引起错误！！！
+
+
+
+梳理一下后，来看看这段代码：猜猜看输出！
+
+```scala
+object DynamicaMixinDemo03 {
+  def main(args: Array[String]): Unit = {
+    val obj = new SimpleClass with MyTrait4 with MyTrait2 with MyTrait3
+    obj.func()
+  }
+}
+
+trait MyTrait1 {
+  def func()
+}
+
+trait MyTrait2 extends MyTrait1 {
+  abstract override def func(): Unit = {
+    println("MyTrait2 func()")
+    super.func()
+  }
+}
+
+trait MyTrait3 extends MyTrait1 {
+  abstract override def func(): Unit = {
+    println("MyTrait3 func()")
+    super.func()
+  }
+}
+
+trait MyTrait4 extends MyTrait1 {
+  override def func(): Unit = {
+    println("MyTrait4 func()")
+  }
+}
+```
+
+> 先判断混入顺序：MyTrait1->MyTrait4->MyTrait2->MyTrait3
+>
+> 答案显而易见！！
+>
+> > MyTrait3 func()
+> > MyTrait2 func()
+> > MyTrait4 func()
+
+----
+
+> <span style="color:red;font-size:30px;font-weight:1000;">总结一下！！！！</span>
+>
+> 那些**对方法部分实现的特质，绝对不能最先混入！！**反而是对方法完全实现了的放在最先混入！
+>
+> 当实现抽象方法的时候，只要用了`super`访问父类的东西，就要使用`abstract override`声明为部分实现！
+
+
+
+### 8.7、动态混入的特质字段
+
+当混入的特质带有字段的时候，那么字段会直接加入到对象中！**不是通过继承！是直接加入！**
+
+```scala
+object DynamicMixinDemo04 {
+  def main(args: Array[String]): Unit = {
+    val obj1 = new SimpleClass with SimpleTrait
+    obj1.num = 2000
+    println(obj1.num) // 2000
+
+    val obj2 = new SimpleClass with SimpleTrait
+    println(obj2.num) // 2020
+
+  }
+}
+
+trait SimpleTrait {
+  var num:Int = 2020
+  var str:String = "Hello World"
+}
+```
+
+
+
+### 8.8、Trait的混入构造顺序
+
+到目前为止，我们了解两种混入Trait的方式，一种是通过声明式混入，一种是通过创建对象时混入！
+
+```scala
+// 声明时混入
+class MyClassA extends MyTraitD with MyTraitC {
+  println("MyClassA created")
+}
+
+// 对象创建时混入
+val obj = new SimpleClass with MyTraitD with MyTraitC
+```
+
+现在new MyClassA，构造的顺序和下面的是一样的吗？！（代码参考8.5案例一）
+
+**创建时混入**的构造顺序是：
+先创建一个SimpleClass对象，然后混入Trait，依次MyTraitA->MyTraitB->MyTraitD->MyTraitC
+
+而**声明时混入**的构造顺序是：
+先混入Trait到MyClassA中，顺序也是MyTraitA->MyTraitB->MyTraitD->MyTraitC，最后混入完成后作为一个整体类创建出一个对象！！
+
+关键就是在于*前者是先创建对象然后进行混入*，*后者则是先混入形成整体然后创建对象！*
+
+
+
+### 8.9、使用Trait对类进行扩展
+
+这里讲的扩展有别于前面的混入Trait，对类对象进行功能扩展，而是**通过Trait继承已有的类，对原有类进行扩展！**（是的！你没有听错！trait继承类！在Java中interface是不能extends类的哦！！！但是可以extends接口！）
+
+
+
+```scala
+object ExpandTest01 {
+  def main(args: Array[String]): Unit = {
+    val logger = new MyLogger
+    logger.showErrorMessage()
+    logger.debug("这是一条调试信息")
+    logger.warning("这是一条警告消息")
+  }
+}
+
+class Logger {
+  def debug(info:String): Unit = {
+    println("DEBUG:" + info)
+  }
+
+  def warning(info:String): Unit = {
+    println("WARNING:" + info)
+  }
+
+  def error(info:String): Unit = {
+    println("ERROR:" + info)
+  }
+}
+
+trait ErrorLogger extends Logger {
+  def showErrorMessage(): Unit = {
+    error("一条错误消息！！")
+  }
+}
+
+class MyLogger extends ErrorLogger {
+
+}
+```
+
+原有类Logger，我们使用特质ErrorLogger extends Logger，为原有类扩展了新方法`showErrorMessage`并调用原有类中的`error`方法（但是这个方法并没有扩展加入到原有类中！！）要通过一个类（案例中的`MyLogger`）混入此特质，此时这个类*同时继承了原有类Logger中的所有内容，并且同时拥有对原有类的扩展内容！*
+此时`MyLogger`则是`Logger`的一个子类！（*所有混入了trait的类，都将成为trait的超类的子类！*）
+所以**若MyLogger还有其他类要继承，必须保证那个类是Logger的子类，否则就会导致多继承的错误！！**
+例如：
+
+```scala
+class Logger {
+	// ...
+}
+
+trait ErrorLogger extends Logger {
+	// ...
+}
+
+class UnknownClass { // 非Logger子类
+  
+}
+
+class SubLogger extends Logger { // Logger子类
+    
+}
+
+// 同时继承UnknownClass和Logger!  多继承！错误！！
+class MyLogger extends UnknownClass with ErrorLogger {
+
+}
+
+// MyLogger -> SubLogger -> Logger 合理，正确！！
+class MyLogger extends SubLogger with ErrorLogger {
+    
+}
+```
+
+
+
+### 8.10、内部类
+
+在此之前，先来回顾一下Java的内部类吧
+
+```java
+public class InnerClassTest {
+    public static void main(String[] args) {
+        OuterClass outer = new OuterClass();
+        outer.showNumber(); // 20
+
+        outer.number = 30;
+
+        OuterClass.InnerClass inner = outer.new InnerClass();
+        inner.showNumber(); // 31
+
+        OuterClass.StaticInnerClass staticInnerClass = new OuterClass.StaticInnerClass();
+        staticInnerClass.showStaticNumber(); // 2020
+        
+    }
+}
+
+
+class OuterClass {
+    public int number = 20;
+
+    public void showNumber() {
+        System.out.println(this.number);
+    }
+
+    class InnerClass {
+        private int number = OuterClass.this.number + 1;
+
+        public void showNumber(){
+            System.out.println(this.number);
+        }
+    }
+
+    static class StaticInnerClass{
+        public int staticNumber = 2020;
+        public void showStaticNumber(){
+            System.out.println(staticNumber);
+        }
+    }
+    
+}
+```
+
+
+
+下面再来看看Scala中是怎么写内部类的吧！
+
+```scala
+object InnerClassDemo01 {
+  def main(args: Array[String]): Unit = {
+    val outer = new OuterClass
+    outer.showNumber // 20
+
+    outer.number = 30
+
+    val inner = new outer.InnerClass
+    inner.showInnerNumber // 31
+
+    val staticInnerClass = new StaticInnerClass
+    staticInnerClass.showStaticInnerNumber // 2020
+
+  }
+}
+
+class OuterClass {
+  var number:Int = 20
+  def showNumber: Unit = {
+    println(number)
+  }
+
+  class InnerClass {
+    var innerNumber:Int = OuterClass.this.number + 1
+    def showInnerNumber: Unit = {
+      println(innerNumber)
+    }
+  }
+
+}
+
+object OuterClass {
+  class StaticInnerClass {
+    var staticInnerNumber:Int = 2020
+    def showStaticInnerNumber: Unit = {
+      println(staticInnerNumber)
+    }
+  }
+}
+```
+
+Scala中，没有static关键字，故静态内部类就写在了伴生对象中！
+
+不知道你们有没有注意到一个细节：
+无论是Scala还是Java，内部类调用外部类的成员属性或者方法的时候都要用到`OuterClass.this.xx`来调用。而`OuterClass.this`则代表是一个外部类的实例！（因为想要创建内部类，是一定需要一个外部类实例的！）
+
+**在Scala中，我们就可以给这个外部类的实例“取别名”！**
+
+```scala
+class OuterClass {
+
+  Outer =>
+  var number:Int = 20
+  def showNumber: Unit = {
+    println(number)
+  }
+
+  class InnerClass {
+    var innerNumber:Int = Outer.number + 1
+    def showInnerNumber: Unit = {
+      println(innerNumber)
+    }
+  }
+}
+```
+
+格式如代码：`Alias => ` 后面跟上外部类的内容，内部类的内容写在class中就行
+内部类中想要引用外部类的东西的时候，可以直接使用`Alias`代替`OuterClass.this`作为外部类的实例名！
+
+
+
+### 8.11、类型投影
+
+在Java中，创建的外部类和内部类之间没有任何绑定关系（所有的内部类都一视同仁！）
+
+```java
+public void fixInnerNumber(InnerClass inner) {
+        inner.number += 2000;
+}
+```
+
+当在外部类中定义了这样一个方法，需要一个内部类作为参数，那么无论是哪个外部类来调用这个函数，*任何一个内部类* 都可以作为此方法的参数！！
+
+
+
+可是在Scala中不一样！！
+
+```scala
+def fixInnerNumber(inner: InnerClass): Unit ={
+    inner.innerNumber += 2000
+}
+```
+
+同样的方法定义，在Scala中，**严格要求这个内部类参数实例必须是由调用此方法的外部类实例创建的**！！**也就是是说Scala中外部类实例和其创建的内部类实例是一一绑定的！**如果外部类调用其方法需要内部类作为参数，那这个内部类实例只能是它亲自创建的！！
+
+
+
+那么如何解决这个问题，达到和Java一样的效果（内部类之间以及外部类之间都不分你我）？
+
+*类型投影*就是救星！所谓投影：就是大家说到底都是一样的，不用加以区别！
+使用方法：
+
+```scala
+def fixInnerNumber(inner: OuterClass#InnerClass): Unit ={
+    inner.innerNumber += 2000
+ }
+```
+
+`外部类#内部类 `这样所有的此类型内部类实例都可以作为此方法的参数！就屏蔽掉了外部类实例对方法参数的影响！！
+
+
+
+## Chap09.隐式操作
+
+### 9.1、隐式转换
+
+学习之前，我们先来看一下一句代码：
+
+```scala
+var number:Int = 3.5
+```
+
+这种写法，理所当然是会报错的！(你可能会想到用toInt方法) 但是在Scala中还有更高级的骚操作，结合隐式函数利用隐式转换就可以让其成为可能！（数据隐式地，自动地转化为对应的类型）
+
+> *隐式函数*
+>
+> 使用`implicit`关键字定义，在指定类型的数据转换时，会自动应用！
+
+来看看是怎么完成的吧！
+
+```scala
+object ImplicitConvertTest {
+
+  def main(args: Array[String]): Unit = {
+    
+    // 隐式函数 在遇到要数据Double转换为Int的时候，自动应用！
+    implicit def intToDouble (value:Double) :Int = {
+      ((value * 10 + 5) / 10 ).toInt // 四舍五入
+    }
+    
+    // 自动调用隐式函数～
+    var number:Int = 3.7
+    println(number) //  4
+    
+    // 使用常规的toInt～
+    var number2:Int = 3.7.toInt
+    println(number2) // 3
+  }
+}
+```
 
 
 
@@ -2154,4 +4010,45 @@ object TestImport {
    val res19: String = o
    ```
    
+
+
+
+## Practice02
+
+1. 将Java HashMap中的键值对，拷贝到Scala中的HashMap中。（导入时使用包重命名方式！）
+
+   ```scala
+   package com.sakura.chapter07
+   
+   /**
+    * @author sakura
+    * @date 2020/10/18 下午5:19
+    */
+   object TestHashMap {
+   
+     import java.util.{HashMap => JavaHashMap}
+     import collection.mutable.{HashMap => ScalaHashMap}
+   
+     def main(args: Array[String]): Unit = {
+       val javaHashMap = new JavaHashMap[Int,String]() // Scala中泛型使用[]包裹
+       javaHashMap.put(1,"one")
+       javaHashMap.put(2,"two")
+       javaHashMap.put(3,"three")
+       javaHashMap.put(4,"four")
+   
+       val scalaHashMap = new ScalaHashMap[Int,String]()
+   
+       for (key <- javaHashMap.keySet().toArray()){
+         // key.asInstanceOf[Int] 将key转化为Int类型
+         // scalaHashMap += ... 将javaHashMap中取出的key->value 加入到scalaHashMap
+         scalaHashMap += (key.asInstanceOf[Int] -> javaHashMap.get(key))
+       }
+       
+       // mkString 输出集合中所有成员，并使用指定的分隔符隔开
+       println(scalaHashMap.mkString(","))
+     }
+   }
+   
+   ```
+
    
